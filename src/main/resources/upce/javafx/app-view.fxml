@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="upce.javafx.AppViewController" prefHeight="600.0" prefWidth="900.0">
+
+    <!-- LEFT SIDEBAR -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="200.0" spacing="5"
+              style="-fx-background-color: #2c3e50; -fx-padding: 10;">
+
+            <Label text="BankIS" style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;">
+                <VBox.margin>
+                    <Insets bottom="20"/>
+                </VBox.margin>
+            </Label>
+
+            <!-- Profile Tab -->
+            <Button fx:id="profileButton" text="Profile" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
+            </Button>
+
+            <!-- Accounts Tab (Expandable) -->
+            <VBox spacing="2">
+                <Button fx:id="accountsButton" text="► Accounts" maxWidth="Infinity"
+                        style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
+                </Button>
+
+                <VBox fx:id="accountsSubMenu" spacing="2" style="-fx-padding: 0 0 0 15;" visible="false" managed="false">
+                    <Button fx:id="account1Button" text="Account 1" maxWidth="Infinity"
+                            style="-fx-background-color: #5dade2; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 8;">
+                    </Button>
+                    <Button fx:id="account2Button" text="Account 2" maxWidth="Infinity"
+                            style="-fx-background-color: #5dade2; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 8;">
+                    </Button>
+                </VBox>
+            </VBox>
+
+            <!-- Teller Tab -->
+            <Button fx:id="tellerButton" text="Teller" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
+            </Button>
+
+            <!-- Support Tab -->
+            <Button fx:id="supportButton" text="Support" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
+            </Button>
+
+        </VBox>
+    </left>
+
+    <!-- MAIN CONTENT AREA -->
+    <center>
+        <StackPane fx:id="contentArea" style="-fx-background-color: #ecf0f1;">
+
+            <!-- PROFILE SECTION -->
+            <VBox fx:id="profileSection" spacing="20" style="-fx-padding: 30;">
+                <Label text="Profile Information" style="-fx-font-size: 28px; -fx-font-weight: bold;">
+                </Label>
+
+                <GridPane hgap="20" vgap="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;">
+                    <Label text="Name:" GridPane.columnIndex="0" GridPane.rowIndex="0"
+                           style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                    <TextField fx:id="nameField" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                               editable="false" text="John" promptText="Name"/>
+
+                    <Label text="Surname:" GridPane.columnIndex="0" GridPane.rowIndex="1"
+                           style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                    <TextField fx:id="surnameField" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                               editable="false" text="Doe" promptText="Surname"/>
+
+                    <Label text="Birth Number:" GridPane.columnIndex="0" GridPane.rowIndex="2"
+                           style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                    <TextField fx:id="birthNumberField" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                               editable="false" text="900101/1234" promptText="Birth Number"/>
+
+                    <Label text="Phone Number:" GridPane.columnIndex="0" GridPane.rowIndex="3"
+                           style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                    <TextField fx:id="phoneField" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                               editable="false" text="+420 123 456 789" promptText="Phone Number"/>
+
+                    <Label text="Email Address:" GridPane.columnIndex="0" GridPane.rowIndex="4"
+                           style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                    <TextField fx:id="emailField" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                               editable="false" text="john.doe@email.com" promptText="Email Address"/>
+
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="150" prefWidth="150"/>
+                        <ColumnConstraints minWidth="300" prefWidth="300"/>
+                    </columnConstraints>
+                </GridPane>
+            </VBox>
+
+            <!-- ACCOUNT 1 SECTION -->
+            <VBox fx:id="account1Section" spacing="20" style="-fx-padding: 30;" visible="false">
+                <Label text="Account 1" style="-fx-font-size: 28px; -fx-font-weight: bold;">
+                </Label>
+
+                <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;">
+                    <Label text="Current Balance" style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;">
+                    </Label>
+                    <Label fx:id="account1Balance" text="\$5,432.50"
+                           style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #27ae60;">
+                    </Label>
+
+                    <HBox spacing="10" style="-fx-padding-top: 20;">
+                        <Button fx:id="createPayment1Button" text="Create New Payment"
+                                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;">
+                        </Button>
+                    </HBox>
+
+                    <Separator/>
+
+                    <Label text="Account Number: 1234567890/0100" style="-fx-font-size: 14px;">
+                    </Label>
+                </VBox>
+            </VBox>
+
+            <!-- ACCOUNT 2 SECTION -->
+            <VBox fx:id="account2Section" spacing="20" style="-fx-padding: 30;" visible="false">
+                <Label text="Account 2" style="-fx-font-size: 28px; -fx-font-weight: bold;">
+                </Label>
+
+                <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;">
+                    <Label text="Current Balance" style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;">
+                    </Label>
+                    <Label fx:id="account2Balance" text="\$12,890.75"
+                           style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #27ae60;">
+                    </Label>
+
+                    <HBox spacing="10" style="-fx-padding-top: 20;">
+                        <Button fx:id="createPayment2Button" text="Create New Payment"
+                                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;">
+                        </Button>
+                    </HBox>
+
+                    <Separator/>
+
+                    <Label text="Account Number: 9876543210/0100" style="-fx-font-size: 14px;">
+                    </Label>
+                </VBox>
+            </VBox>
+
+            <!-- TELLER SECTION -->
+            <VBox fx:id="tellerSection" spacing="20" style="-fx-padding: 30;" visible="false">
+                <Label text="Teller Information" style="-fx-font-size: 28px; -fx-font-weight: bold;">
+                </Label>
+
+                <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;">
+                    <Label text="Your Personal Teller" style="-fx-font-size: 18px; -fx-font-weight: bold;">
+                    </Label>
+
+                    <GridPane hgap="15" vgap="10" style="-fx-padding-top: 10;">
+                        <Label text="Name:" GridPane.columnIndex="0" GridPane.rowIndex="0"
+                               style="-fx-font-weight: bold;"/>
+                        <Label text="Jane Smith" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                        <Label text="Phone:" GridPane.columnIndex="0" GridPane.rowIndex="1"
+                               style="-fx-font-weight: bold;"/>
+                        <Label text="+420 987 654 321" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                        <Label text="Email:" GridPane.columnIndex="0" GridPane.rowIndex="2"
+                               style="-fx-font-weight: bold;"/>
+                        <Label text="jane.smith@bankis.com" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                        <Label text="Office:" GridPane.columnIndex="0" GridPane.rowIndex="3"
+                               style="-fx-font-weight: bold;"/>
+                        <Label text="Branch 01 - Downtown" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+                        <Label text="Working Hours:" GridPane.columnIndex="0" GridPane.rowIndex="4"
+                               style="-fx-font-weight: bold;"/>
+                        <Label text="Mon-Fri: 9:00 AM - 5:00 PM" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="120" prefWidth="120"/>
+                            <ColumnConstraints minWidth="300" prefWidth="300"/>
+                        </columnConstraints>
+                    </GridPane>
+                </VBox>
+            </VBox>
+
+            <!-- SUPPORT SECTION -->
+            <VBox fx:id="supportSection" spacing="20" style="-fx-padding: 30;" visible="false">
+                <Label text="Support Chat" style="-fx-font-size: 28px; -fx-font-weight: bold;">
+                </Label>
+
+                <VBox spacing="10" VBox.vgrow="ALWAYS"
+                      style="-fx-background-color: white; -fx-background-radius: 5; -fx-padding: 15;">
+
+                    <!-- Chat Messages Area -->
+                    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                                style="-fx-background-color: white; -fx-background: white;">
+                        <VBox fx:id="chatMessagesContainer" spacing="10" style="-fx-padding: 10;">
+
+                            <!-- Sample messages -->
+                            <HBox alignment="CENTER_LEFT">
+                                <VBox spacing="5" style="-fx-background-color: #e8f4f8; -fx-background-radius: 10; -fx-padding: 10; -fx-max-width: 400;">
+                                    <Label text="Support Agent" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #7f8c8d;"/>
+                                    <Label text="Hello! How can I help you today?" wrapText="true" style="-fx-font-size: 14px;"/>
+                                    <Label text="10:30 AM" style="-fx-font-size: 10px; -fx-text-fill: #95a5a6;"/>
+                                </VBox>
+                            </HBox>
+
+                            <HBox alignment="CENTER_RIGHT">
+                                <VBox spacing="5" style="-fx-background-color: #d4edda; -fx-background-radius: 10; -fx-padding: 10; -fx-max-width: 400;">
+                                    <Label text="You" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #7f8c8d;"/>
+                                    <Label text="I have a question about my account." wrapText="true" style="-fx-font-size: 14px;"/>
+                                    <Label text="10:31 AM" style="-fx-font-size: 10px; -fx-text-fill: #95a5a6;"/>
+                                </VBox>
+                            </HBox>
+
+                            <HBox alignment="CENTER_LEFT">
+                                <VBox spacing="5" style="-fx-background-color: #e8f4f8; -fx-background-radius: 10; -fx-padding: 10; -fx-max-width: 400;">
+                                    <Label text="Support Agent" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #7f8c8d;"/>
+                                    <Label text="I'd be happy to help! What would you like to know?" wrapText="true" style="-fx-font-size: 14px;"/>
+                                    <Label text="10:32 AM" style="-fx-font-size: 10px; -fx-text-fill: #95a5a6;"/>
+                                </VBox>
+                            </HBox>
+
+                        </VBox>
+                    </ScrollPane>
+
+                    <!-- Message Input Area -->
+                    <Separator/>
+                    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding-top: 10;">
+                        <TextField fx:id="messageInput" promptText="Type your message..."
+                                   HBox.hgrow="ALWAYS" style="-fx-font-size: 14px; -fx-padding: 8;"/>
+                        <Button fx:id="sendMessageButton" text="Send"
+                                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 20;"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+
+        </StackPane>
+    </center>
+
+</BorderPane>
