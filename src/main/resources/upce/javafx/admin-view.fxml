@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="upce.javafx.AdminViewController">
+    <!-- Sidebar with navigation -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="200.0" spacing="5"
+              style="-fx-background-color: #2c3e50; -fx-padding: 10;">
+
+            <Label text="BankIS" style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;">
+                <VBox.margin>
+                    <Insets bottom="20"/>
+                </VBox.margin>
+            </Label>
+
+            <Button text="Branches" onAction="#showBranches" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Clients" onAction="#showClients" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Tellers" onAction="#showTellers" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Users" onAction="#showUsers" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Accounts" onAction="#showAccounts" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Transactions" onAction="#showTransactions" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Logins" onAction="#showLogins" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Messages" onAction="#showMessages" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Audit logs" onAction="#showAudits" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+
+            <Region VBox.vgrow="ALWAYS" />
+
+            <Button text="Logout" onAction="#onLogout" maxWidth="Infinity"
+                    style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+        </VBox>
+    </left>
+
+    <center>
+        <StackPane fx:id="contentStack" style="-fx-background-color: #ecf0f1; -fx-padding: 16;">
+            <!-- Branches section -->
+            <VBox fx:id="branchesSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <TextField fx:id="branchSearchField" promptText="Search branch name (prefix)" />
+                    <Button text="Search" onAction="#reloadBranches" />
+                </HBox>
+                <TableView fx:id="branchesTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <!-- Users section -->
+            <VBox fx:id="usersSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <TextField fx:id="userNameSearchField" promptText="Name (prefix)" />
+                    <TextField fx:id="userSurnameSearchField" promptText="Surname (prefix)" />
+                    <Button text="Search" onAction="#reloadUsers" />
+                </HBox>
+                <TableView fx:id="usersTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <!-- Placeholders for other sections -->
+            <VBox fx:id="clientsSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <TextField fx:id="clientNameSearchField" promptText="Name (prefix)" />
+                    <TextField fx:id="clientSurnameSearchField" promptText="Surname (prefix)" />
+                    <Button text="Search" onAction="#reloadClients" />
+                </HBox>
+                <TableView fx:id="clientsTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <VBox fx:id="tellersSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <TextField fx:id="tellerNameSearchField" promptText="Name (prefix)" />
+                    <TextField fx:id="tellerSurnameSearchField" promptText="Surname (prefix)" />
+                    <Button text="Search" onAction="#reloadTellers" />
+                </HBox>
+                <TableView fx:id="tellersTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <VBox fx:id="accountsSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <TextField fx:id="accountOwnerNameField" promptText="Owner name (prefix)" />
+                    <TextField fx:id="accountOwnerSurnameField" promptText="Owner surname (prefix)" />
+                    <TextField fx:id="accountNumberSearchField" promptText="Account number (prefix)" />
+                    <Button text="Search" onAction="#reloadAccounts" />
+                </HBox>
+                <TableView fx:id="accountsTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <VBox fx:id="transactionsSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <TextField fx:id="transactionAccountSearchField" promptText="Account number (prefix)" />
+                    <ComboBox fx:id="transactionTypeFilter" promptText="Type" />
+                    <TextField fx:id="amountMinField" promptText="Amount min" />
+                    <TextField fx:id="amountMaxField" promptText="Amount max" />
+                    <DatePicker fx:id="dateFromPicker" promptText="Date from" />
+                    <DatePicker fx:id="dateToPicker" promptText="Date to" />
+                    <Button text="Apply" onAction="#reloadTransactions" />
+                </HBox>
+                <TableView fx:id="transactionsTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <VBox fx:id="loginsSection" spacing="8" visible="false" managed="false">
+                <TableView fx:id="loginsTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <VBox fx:id="messagesSection" spacing="8" visible="false" managed="false">
+                <TableView fx:id="messagesTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <VBox fx:id="auditsSection" spacing="8" visible="false" managed="false">
+                <TableView fx:id="auditsTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+        </StackPane>
+    </center>
+</BorderPane>

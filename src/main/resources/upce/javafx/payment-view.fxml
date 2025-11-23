@@ -3,74 +3,48 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
-<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="upce.javafx.PaymentViewController" spacing="20" style="-fx-background-color: #ecf0f1; -fx-padding: 30;"
-      prefHeight="500.0" prefWidth="500.0">
+<VBox spacing="15" alignment="CENTER" style="-fx-padding: 20; -fx-background-color: white;" 
+      xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="upce.javafx.PaymentViewController">
 
-    <Label text="Create New Payment" style="-fx-font-size: 24px; -fx-font-weight: bold;">
-    </Label>
-
-    <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 5; -fx-padding: 20;">
-
-        <!-- Amount Field -->
-        <VBox spacing="5">
-            <Label text="Amount" style="-fx-font-weight: bold; -fx-font-size: 14px;">
-            </Label>
-            <TextField fx:id="amountField" promptText="Enter amount (e.g., 1000.00)"
-                       style="-fx-font-size: 14px; -fx-padding: 10;">
-            </TextField>
-        </VBox>
-
-        <!-- Recipient Account Field -->
-        <VBox spacing="5">
-            <Label text="Recipient Account Number" style="-fx-font-weight: bold; -fx-font-size: 14px;">
-            </Label>
-            <TextField fx:id="recipientAccountField" promptText="Enter recipient account number"
-                       style="-fx-font-size: 14px; -fx-padding: 10;">
-            </TextField>
-        </VBox>
-
-        <!-- Message for Sender -->
-        <VBox spacing="5">
-            <Label text="Message for Me (Optional)" style="-fx-font-weight: bold; -fx-font-size: 14px;">
-            </Label>
-            <TextArea fx:id="messageSenderField" promptText="Add a note for yourself..."
-                      prefRowCount="3" wrapText="true"
-                      style="-fx-font-size: 14px;">
-            </TextArea>
-        </VBox>
-
-        <!-- Message for Recipient -->
-        <VBox spacing="5">
-            <Label text="Message for Recipient (Optional)" style="-fx-font-weight: bold; -fx-font-size: 14px;">
-            </Label>
-            <TextArea fx:id="messageRecipientField" promptText="Add a note for recipient..."
-                      prefRowCount="3" wrapText="true"
-                      style="-fx-font-size: 14px;">
-            </TextArea>
-        </VBox>
-
-        <Separator style="-fx-padding: 10 0 10 0;"/>
-
-        <!-- Buttons -->
-        <HBox spacing="15" alignment="CENTER">
-            <Button fx:id="confirmButton" text="Confirm Payment"
-                    style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 30; -fx-font-weight: bold;">
-            </Button>
-            <Button fx:id="cancelButton" text="Cancel"
-                    style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 30;">
-            </Button>
-        </HBox>
-
-    </VBox>
-
-    <!-- Information Notice -->
-    <Label text="Note: Please verify all details before confirming the payment."
-           style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px; -fx-font-style: italic;">
+    <Label text="New Payment" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;">
         <VBox.margin>
-            <Insets top="10"/>
+            <Insets bottom="10"/>
         </VBox.margin>
     </Label>
+
+    <GridPane vgap="10" hgap="10">
+        <Label text="From Account:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="fromAccountField" GridPane.columnIndex="1" GridPane.rowIndex="0" editable="false" style="-fx-background-color: #ecf0f1;"/>
+
+        <Label text="To Account:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="toAccountField" GridPane.columnIndex="1" GridPane.rowIndex="1" promptText="Account Number"/>
+
+        <Label text="Amount (CZK):" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="amountField" GridPane.columnIndex="1" GridPane.rowIndex="2" promptText="0.00"/>
+        
+        <Label text="Message for Recipient:" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-weight: bold;" GridPane.valignment="TOP"/>
+        <TextArea fx:id="messageToField" GridPane.columnIndex="1" GridPane.rowIndex="3" prefRowCount="2" wrapText="true"/>
+
+        <Label text="Message for Sender:" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-font-weight: bold;" GridPane.valignment="TOP"/>
+        <TextArea fx:id="messageFromField" GridPane.columnIndex="1" GridPane.rowIndex="4" prefRowCount="2" wrapText="true"/>
+
+        <columnConstraints>
+            <ColumnConstraints minWidth="140" />
+            <ColumnConstraints hgrow="ALWAYS" />
+        </columnConstraints>
+    </GridPane>
+
+    <!-- Error Label -->
+    <Label fx:id="errorLabel" textFill="#e74c3c" visible="false" managed="false" wrapText="true"/>
+
+    <HBox spacing="15" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+        <Button fx:id="cancelButton" text="Cancel" 
+                style="-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-padding: 8 20;"/>
+        <Button fx:id="confirmButton" text="Send Payment" defaultButton="true"
+                style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 8 20; -fx-font-weight: bold;"/>
+    </HBox>
 
 </VBox>
