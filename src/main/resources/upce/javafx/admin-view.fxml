@@ -50,6 +50,7 @@
                 <HBox spacing="8">
                     <TextField fx:id="branchSearchField" promptText="Search branch name (prefix)" />
                     <Button text="Search" onAction="#reloadBranches" />
+                    <Button text="Add" onAction="#onAddBranch" />
                 </HBox>
                 <TableView fx:id="branchesTable" VBox.vgrow="ALWAYS"/>
             </VBox>
@@ -60,6 +61,7 @@
                     <TextField fx:id="userNameSearchField" promptText="Name (prefix)" />
                     <TextField fx:id="userSurnameSearchField" promptText="Surname (prefix)" />
                     <Button text="Search" onAction="#reloadUsers" />
+                    <Button text="Add" onAction="#onAddUser" />
                 </HBox>
                 <TableView fx:id="usersTable" VBox.vgrow="ALWAYS"/>
             </VBox>
@@ -70,6 +72,7 @@
                     <TextField fx:id="clientNameSearchField" promptText="Name (prefix)" />
                     <TextField fx:id="clientSurnameSearchField" promptText="Surname (prefix)" />
                     <Button text="Search" onAction="#reloadClients" />
+                    <Button text="Add" onAction="#onAddClient" />
                 </HBox>
                 <TableView fx:id="clientsTable" VBox.vgrow="ALWAYS"/>
             </VBox>
@@ -79,29 +82,43 @@
                     <TextField fx:id="tellerNameSearchField" promptText="Name (prefix)" />
                     <TextField fx:id="tellerSurnameSearchField" promptText="Surname (prefix)" />
                     <Button text="Search" onAction="#reloadTellers" />
+                    <Button text="Add" onAction="#onAddTeller" />
                 </HBox>
                 <TableView fx:id="tellersTable" VBox.vgrow="ALWAYS"/>
             </VBox>
 
             <VBox fx:id="accountsSection" spacing="8" visible="false" managed="false">
+                <!-- Row 1: filters only -->
                 <HBox spacing="8">
                     <TextField fx:id="accountOwnerNameField" promptText="Owner name (prefix)" />
                     <TextField fx:id="accountOwnerSurnameField" promptText="Owner surname (prefix)" />
                     <TextField fx:id="accountNumberSearchField" promptText="Account number (prefix)" />
+                </HBox>
+                <!-- Row 2: actions (search/apply + add) -->
+                <HBox spacing="8">
+                    <Region HBox.hgrow="ALWAYS" />
                     <Button text="Search" onAction="#reloadAccounts" />
+                    <Button text="Add" onAction="#onAddAccount" />
                 </HBox>
                 <TableView fx:id="accountsTable" VBox.vgrow="ALWAYS"/>
             </VBox>
 
             <VBox fx:id="transactionsSection" spacing="8" visible="false" managed="false">
+                <!-- Row 1: filters only -->
                 <HBox spacing="8">
                     <TextField fx:id="transactionAccountSearchField" promptText="Account number (prefix)" />
                     <ComboBox fx:id="transactionTypeFilter" promptText="Type" />
+                    <ComboBox fx:id="transactionDirectionFilter" promptText="Direction (All/Incoming/Outgoing)" />
                     <TextField fx:id="amountMinField" promptText="Amount min" />
                     <TextField fx:id="amountMaxField" promptText="Amount max" />
                     <DatePicker fx:id="dateFromPicker" promptText="Date from" />
                     <DatePicker fx:id="dateToPicker" promptText="Date to" />
+                </HBox>
+                <!-- Row 2: actions (apply + add) -->
+                <HBox spacing="8">
+                    <Region HBox.hgrow="ALWAYS" />
                     <Button text="Apply" onAction="#reloadTransactions" />
+                    <Button text="Add" onAction="#onAddTransaction" />
                 </HBox>
                 <TableView fx:id="transactionsTable" VBox.vgrow="ALWAYS"/>
             </VBox>
@@ -111,6 +128,18 @@
             </VBox>
 
             <VBox fx:id="messagesSection" spacing="8" visible="false" managed="false">
+                <!-- Row 1: filters -->
+                <HBox spacing="8">
+                    <TextField fx:id="messageUserSearchField" promptText="User name/surname (prefix)" />
+                    <DatePicker fx:id="messageDateFromPicker" promptText="Date from" />
+                    <DatePicker fx:id="messageDateToPicker" promptText="Date to" />
+                </HBox>
+                <!-- Row 2: actions -->
+                <HBox spacing="8">
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button text="Apply" onAction="#reloadMessages" />
+                    <Button text="Add" onAction="#onAddMessage" />
+                </HBox>
                 <TableView fx:id="messagesTable" VBox.vgrow="ALWAYS"/>
             </VBox>
 
