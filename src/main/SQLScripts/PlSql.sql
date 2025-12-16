@@ -28,8 +28,8 @@ VALUES (BRANCH_SEQ.NEXTVAL, 'Central Branch', 1);
 -- ==============================
 -- 4) Create teller user (use second address)
 -- ==============================
-INSERT INTO "User"(User_id, Name, Surname, Password, active, Role_id, Address_id)
-VALUES (USER_SEQ.NEXTVAL, 'Alice', 'Teller', 'pass123', 'Y', 1, 2);
+INSERT INTO "User"(User_id, Name, Surname, Password, active, approved, Role_id, Address_id)
+VALUES (USER_SEQ.NEXTVAL, 'Alice', 'Teller', 'pass123', 'Y', 'Y', 1, 2);
 
 -- ==============================
 -- 5) Create teller entry
@@ -40,8 +40,8 @@ VALUES (1, '123456789', 'alice@bank.com', 1);
 -- ==============================
 -- 6) Create client user (use third address)
 -- ==============================
-INSERT INTO "User"(User_id, Name, Surname, Password, active, Role_id, Address_id)
-VALUES (USER_SEQ.NEXTVAL, 'Bob', 'Client', 'pass123', 'Y', 2, 3);
+INSERT INTO "User"(User_id, Name, Surname, Password, active, approved, Role_id, Address_id)
+VALUES (USER_SEQ.NEXTVAL, 'Bob', 'Client', 'pass123', 'Y', 'Y', 2, 3);
 
 -- ==============================
 -- 7) Create client entry with teller
@@ -115,12 +115,13 @@ INSERT INTO Address (Address_id, Country, State, City, Street, House_number, ZIP
 VALUES (ADDRESS_SEQ.NEXTVAL, 'Czechia', NULL, 'Prague', 'Tech Street', 1, 10000);
 
 -- Add Admin User
-INSERT INTO "User" (User_id, Name, Surname, Password, active, Role_id, Address_id)
+INSERT INTO "User" (User_id, Name, Surname, Password, active, approved, Role_id, Address_id)
 VALUES (
     USER_SEQ.NEXTVAL,
     'Super',
     'Admin',
     'admin', -- Password should be hashed in production
+    'Y',
     'Y',
     (SELECT Role_id FROM Role WHERE Role_name = 'Admin'),
     (SELECT Address_id FROM Address WHERE Street = 'Tech Street' AND City = 'Prague')
@@ -411,8 +412,8 @@ BEGIN
 
     -- 2. Create User (Role 2 = Client)
     v_user_id := USER_SEQ.NEXTVAL;
-    INSERT INTO "User"(User_id, Name, Surname, Password, active, Role_id, Address_id)
-    VALUES (v_user_id, p_name, p_surname, p_password, 'Y', v_role_id, v_addr_id);
+    INSERT INTO "User"(User_id, Name, Surname, Password, active, approved, Role_id, Address_id)
+    VALUES (v_user_id, p_name, p_surname, p_password, 'Y', 'Y', v_role_id, v_addr_id);
 
     -- 3. Create Client (Linked to Teller)
     INSERT INTO Client(User_id, Birth_number, Phone_number, Email_address, Teller_id)

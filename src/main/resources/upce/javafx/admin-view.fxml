@@ -36,6 +36,16 @@
             <Button text="Audit logs" onAction="#showAudits" maxWidth="Infinity"
                     style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
 
+            <!-- Additional master data tables -->
+            <Button text="Roles" onAction="#showRoles" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Addresses" onAction="#showAddresses" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Transaction types" onAction="#showTransactionTypes" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button text="Documents" onAction="#showDocuments" maxWidth="Infinity"
+                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+
             <Region VBox.vgrow="ALWAYS" />
 
             <Button text="Logout" onAction="#onLogout" maxWidth="Infinity"
@@ -145,6 +155,35 @@
 
             <VBox fx:id="auditsSection" spacing="8" visible="false" managed="false">
                 <TableView fx:id="auditsTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <!-- Roles section -->
+            <VBox fx:id="rolesSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <Button text="Add" onAction="#onAddRole" />
+                </HBox>
+                <TableView fx:id="rolesTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <!-- Addresses section -->
+            <VBox fx:id="addressesSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <Button text="Add" onAction="#onAddAddress" />
+                </HBox>
+                <TableView fx:id="addressesTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <!-- Transaction Types section -->
+            <VBox fx:id="transactionTypesSection" spacing="8" visible="false" managed="false">
+                <HBox spacing="8">
+                    <Button text="Add" onAction="#onAddTransactionType" />
+                </HBox>
+                <TableView fx:id="transactionTypesTable" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <!-- Documents section (read-only metadata + delete) -->
+            <VBox fx:id="documentsSection" spacing="8" visible="false" managed="false">
+                <TableView fx:id="documentsTable" VBox.vgrow="ALWAYS"/>
             </VBox>
         </StackPane>
     </center>

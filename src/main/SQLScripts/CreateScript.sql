@@ -220,6 +220,7 @@ CREATE TABLE "User"
     Surname    VARCHAR2 (50)  NOT NULL ,
     Password   VARCHAR2 (50)  NOT NULL ,
     active     CHAR (1)  NOT NULL ,
+    approved   CHAR (1)  DEFAULT 'N' NOT NULL ,
     Role_id    INTEGER  NOT NULL ,
     Address_id INTEGER  NOT NULL
 )

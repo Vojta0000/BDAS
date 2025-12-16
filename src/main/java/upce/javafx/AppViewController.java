@@ -4,6 +4,7 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.GridPane;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -102,7 +103,7 @@ public class AppViewController {
             return;
         }
 
-        String userLoginQuery = "SELECT * FROM \"User\" JOIN ROLE ON \"User\".ROLE_ID = ROLE.ROLE_ID WHERE name = ? AND surname = ? AND password = ?";
+        String userLoginQuery = "SELECT u.*, r.ROLE_NAME FROM \"User\" u JOIN ROLE r ON u.ROLE_ID = r.ROLE_ID WHERE u.NAME = ? AND u.SURNAME = ? AND u.PASSWORD = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(userLoginQuery)) {
             stmt.setString(1, nameField.getText());
@@ -117,6 +118,18 @@ public class AppViewController {
                     return;
                 }
                 String res = rs.getString("ROLE_NAME");
+                String approved = null;
+                try { approved = rs.getString("APPROVED"); } catch (SQLException ignore) {}
+
+                // If not admin, require approved = 'Y'
+                if (!"Admin".equals(res)) {
+                    if (approved == null || !"Y".equalsIgnoreCase(approved)) {
+                        loginErrorLabel.setText("Your account is pending approval by a teller.");
+                        loginErrorLabel.setVisible(true);
+                        loginErrorLabel.setManaged(true);
+                        return;
+                    }
+                }
                 if (res.equals("Teller")) {
                     isTeller = true;
                 } else if (res.equals("Client")) {
@@ -245,6 +258,137 @@ public class AppViewController {
             }
             // You could trigger client default section here if needed.
         }
+    }
+
+    @FXML
+    private void onRequestAccount() {
+        // Build a simple registration dialog mirroring teller registration fields
+        Dialog<Boolean> dlg = new Dialog<>();
+        dlg.setTitle("Request an account");
+
+        TextField nameF = new TextField();
+        TextField surnameF = new TextField();
+        PasswordField passF = new PasswordField();
+        TextField birthF = new TextField();
+        TextField phoneF = new TextField();
+        TextField emailF = new TextField();
+        TextField streetF = new TextField();
+        TextField houseF = new TextField();
+        TextField cityF = new TextField();
+        TextField zipF = new TextField();
+        TextField countryF = new TextField("Czechia");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(8); grid.setVgap(8);
+        grid.addRow(0, new Label("Name:"), nameF);
+        grid.addRow(1, new Label("Surname:"), surnameF);
+        grid.addRow(2, new Label("Password:"), passF);
+        grid.addRow(3, new Label("Birth number:"), birthF);
+        grid.addRow(4, new Label("Phone:"), phoneF);
+        grid.addRow(5, new Label("Email:"), emailF);
+        grid.addRow(6, new Label("Street:"), streetF);
+        grid.addRow(7, new Label("House #:"), houseF);
+        grid.addRow(8, new Label("City:"), cityF);
+        grid.addRow(9, new Label("ZIP:"), zipF);
+        grid.addRow(10, new Label("Country:"), countryF);
+
+        dlg.getDialogPane().setContent(grid);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt == ButtonType.OK);
+
+        Boolean ok = dlg.showAndWait().orElse(false);
+        if (!ok) return;
+
+        // Basic validation
+        if (isEmpty(nameF.getText()) || isEmpty(surnameF.getText()) || isEmpty(passF.getText()) ||
+                isEmpty(birthF.getText()) || isEmpty(phoneF.getText()) || isEmpty(emailF.getText()) ||
+                isEmpty(streetF.getText()) || isEmpty(houseF.getText()) || isEmpty(cityF.getText()) || isEmpty(zipF.getText())) {
+            showInfo("Validation", "All fields are required.");
+            return;
+        }
+
+        int houseNum; int zipNum;
+        try {
+            houseNum = Integer.parseInt(houseF.getText().trim());
+            zipNum = Integer.parseInt(zipF.getText().trim());
+        } catch (NumberFormatException nfe) {
+            showInfo("Validation", "House number and ZIP must be numbers.");
+            return;
+        }
+
+        // Insert pending user
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+
+            // find client role id
+            int clientRoleId = -1;
+            try (PreparedStatement ps = conn.prepareStatement("SELECT ROLE_ID FROM ROLE WHERE ROLE_NAME = 'Client'")) {
+                try (ResultSet rs = ps.executeQuery()) { if (rs.next()) clientRoleId = rs.getInt(1); }
+            }
+            if (clientRoleId == -1) { conn.rollback(); showInfo("Error", "Client role not found."); return; }
+
+            // find a teller to assign
+            int tellerId = -1;
+            try (PreparedStatement ps = conn.prepareStatement("SELECT USER_ID FROM TELLER FETCH FIRST 1 ROWS ONLY")) {
+                try (ResultSet rs = ps.executeQuery()) { if (rs.next()) tellerId = rs.getInt(1); }
+            }
+            if (tellerId == -1) { conn.rollback(); showInfo("Error", "No teller available to assign. Try later."); return; }
+
+            // generate IDs from sequences
+            int addressId = -1; int userId = -1;
+            try (PreparedStatement ps = conn.prepareStatement("SELECT ADDRESS_SEQ.NEXTVAL FROM DUAL")) {
+                try (ResultSet rs = ps.executeQuery()) { if (rs.next()) addressId = rs.getInt(1); }
+            }
+            try (PreparedStatement ps = conn.prepareStatement("SELECT USER_SEQ.NEXTVAL FROM DUAL")) {
+                try (ResultSet rs = ps.executeQuery()) { if (rs.next()) userId = rs.getInt(1); }
+            }
+
+            if (addressId == -1 || userId == -1) { conn.rollback(); showInfo("Error", "Failed to generate IDs."); return; }
+
+            // insert address
+            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES (?, ?, NULL, ?, ?, ?, ?)")) {
+                ps.setInt(1, addressId);
+                ps.setString(2, countryF.getText().trim());
+                ps.setString(3, cityF.getText().trim());
+                ps.setString(4, streetF.getText().trim());
+                ps.setInt(5, houseNum);
+                ps.setInt(6, zipNum);
+                ps.executeUpdate();
+            }
+
+            // insert user (approved = 'N')
+            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO \"User\"(USER_ID, NAME, SURNAME, PASSWORD, ACTIVE, APPROVED, ROLE_ID, ADDRESS_ID) VALUES (?, ?, ?, ?, 'Y', 'N', ?, ?)")) {
+                ps.setInt(1, userId);
+                ps.setString(2, nameF.getText().trim());
+                ps.setString(3, surnameF.getText().trim());
+                ps.setString(4, passF.getText());
+                ps.setInt(5, clientRoleId);
+                ps.setInt(6, addressId);
+                ps.executeUpdate();
+            }
+
+            // insert client
+            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO CLIENT(USER_ID, BIRTH_NUMBER, PHONE_NUMBER, EMAIL_ADDRESS, TELLER_ID) VALUES (?, ?, ?, ?, ?)")) {
+                ps.setInt(1, userId);
+                ps.setString(2, birthF.getText().trim());
+                ps.setString(3, phoneF.getText().trim());
+                ps.setString(4, emailF.getText().trim());
+                ps.setInt(5, tellerId);
+                ps.executeUpdate();
+            }
+
+            conn.commit();
+            showInfo("Request submitted", "Your request was submitted. A teller will review and approve your account.");
+        } catch (SQLException e) {
+            showInfo("Error", "Failed to submit request: " + e.getMessage());
+        }
+    }
+
+    private void showInfo(String title, String msg) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
+        a.setHeaderText(title);
+        a.setTitle(title);
+        a.showAndWait();
     }
 
     // ===== Emulation API for Admin =====

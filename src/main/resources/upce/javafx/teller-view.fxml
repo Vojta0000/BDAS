@@ -48,6 +48,10 @@
                     style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
             </Button>
 
+            <Button fx:id="pendingRequestsButton" text="Pending requests" maxWidth="Infinity"
+                    style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
+            </Button>
+
             <!-- Pushes the logout button to the bottom -->
             <Region VBox.vgrow="ALWAYS" />
 
@@ -334,6 +338,12 @@
                         </HBox>
                     </VBox>
                 </ScrollPane>
+            </VBox>
+
+            <!-- PENDING REQUESTS SECTION -->
+            <VBox fx:id="pendingRequestsSection" spacing="20" style="-fx-padding: 30;" visible="false" managed="false">
+                <Label text="Pending Registrations" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
+                <TableView fx:id="pendingTable" VBox.vgrow="ALWAYS"/>
             </VBox>
 
         </StackPane>

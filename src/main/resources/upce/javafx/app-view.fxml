@@ -27,6 +27,9 @@
         <Button fx:id="loginButton" text="Login" onAction="#onLogin"
                 style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 8 12; -fx-background-radius: 4;"/>
 
+        <Button fx:id="requestAccountButton" text="Request an account" onAction="#onRequestAccount"
+                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 8 12; -fx-background-radius: 4;"/>
+
         <Label fx:id="loginErrorLabel" textFill="#e74c3c" visible="false" managed="false"/>
     </VBox>
 

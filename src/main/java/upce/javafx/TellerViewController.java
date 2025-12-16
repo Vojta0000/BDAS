@@ -159,6 +159,13 @@ public class TellerViewController {
             confirmRegistrationButton.setOnAction(e -> registerClient());
         }
 
+        // Pending requests button
+        if (pendingRequestsButton != null) {
+            pendingRequestsButton.setOnAction(e -> showSection("pending"));
+        }
+        // Prepare pending table columns if present
+        setupPendingTable();
+
         // Clients submenu toggle
         clientsButton.setOnAction(e -> toggleClientsMenu());
 
@@ -311,7 +318,7 @@ public class TellerViewController {
             // Assuming FUNCTION get_teller_clients returns a cursor, but JDBC handling of REF CURSOR
             // can be tricky depending on driver. Standard Select is safer if we have direct access.
             // Based on PL/SQL: SELECT u.User_id, u.Name, u.Surname, c.Email_address, c.Phone_number ...
-            String sql = "SELECT u.User_id, u.Name, u.Surname FROM Client c JOIN \"User\" u ON c.User_id = u.User_id WHERE c.Teller_id = ?";
+            String sql = "SELECT u.User_id, u.Name, u.Surname FROM Client c JOIN \"User\" u ON c.User_id = u.User_id WHERE c.Teller_id = ? AND u.APPROVED = 'Y'";
 
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setInt(1, tellerId);
@@ -510,6 +517,9 @@ public class TellerViewController {
         if (clientDocumentsSection != null) {
             clientDocumentsSection.setVisible(false); clientDocumentsSection.setManaged(false);
         }
+        if (pendingRequestsSection != null) {
+            pendingRequestsSection.setVisible(false); pendingRequestsSection.setManaged(false);
+        }
 
         switch (section) {
             case "profile":
@@ -540,8 +550,153 @@ public class TellerViewController {
                     registerClientSection.setVisible(true); registerClientSection.setManaged(true);
                 }
                 break;
+            case "pending":
+                if (pendingRequestsSection != null) {
+                    pendingRequestsSection.setVisible(true); pendingRequestsSection.setManaged(true);
+                    loadPendingRequests();
+                }
+                break;
             default:
                 profileSection.setVisible(true); profileSection.setManaged(true);
+        }
+    }
+
+    // ----- Pending Requests -----
+    @FXML private Button pendingRequestsButton;
+    @FXML private VBox pendingRequestsSection;
+    @FXML private TableView<PendingRow> pendingTable;
+
+    @FXML
+    public void initializePending() { /* kept for potential FXML hooks; logic moved into initialize() */ }
+
+    private boolean pendingColumnsInitialized = false;
+    private void setupPendingTable() {
+        if (pendingTable == null || pendingColumnsInitialized) return;
+        TableColumn<PendingRow, String> nameCol = new TableColumn<>("Name");
+        nameCol.setCellValueFactory(d -> d.getValue().name);
+        nameCol.setPrefWidth(160);
+
+        TableColumn<PendingRow, String> birthCol = new TableColumn<>("Birth #");
+        birthCol.setCellValueFactory(d -> d.getValue().birthNumber);
+        birthCol.setPrefWidth(140);
+
+        TableColumn<PendingRow, String> phoneCol = new TableColumn<>("Phone");
+        phoneCol.setCellValueFactory(d -> d.getValue().phone);
+        phoneCol.setPrefWidth(120);
+
+        TableColumn<PendingRow, String> emailCol = new TableColumn<>("Email");
+        emailCol.setCellValueFactory(d -> d.getValue().email);
+        emailCol.setPrefWidth(220);
+
+        TableColumn<PendingRow, String> addressCol = new TableColumn<>("Address");
+        addressCol.setCellValueFactory(d -> d.getValue().address);
+        addressCol.setPrefWidth(320);
+
+        TableColumn<PendingRow, String> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellFactory(col -> new TableCell<>() {
+            private final Button approveBtn = new Button("Approve");
+            private final Button declineBtn = new Button("Decline");
+            {
+                approveBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
+                declineBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
+                approveBtn.setOnAction(e -> {
+                    PendingRow row = getTableView().getItems().get(getIndex());
+                    approvePending(row.userId.get());
+                });
+                declineBtn.setOnAction(e -> {
+                    PendingRow row = getTableView().getItems().get(getIndex());
+                    declinePending(row.userId.get());
+                });
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : new HBox(6, approveBtn, declineBtn));
+            }
+        });
+        actionsCol.setPrefWidth(200);
+
+        pendingTable.getColumns().addAll(nameCol, birthCol, phoneCol, emailCol, addressCol, actionsCol);
+        pendingColumnsInitialized = true;
+    }
+
+    private void loadPendingRequests() {
+        setupPendingTable();
+        if (pendingTable == null) return;
+        javafx.collections.ObservableList<PendingRow> rows = FXCollections.observableArrayList();
+        int tellerId = HelloApplication.userId;
+        String sql = """
+                SELECT u.USER_ID, u.NAME, u.SURNAME,
+                       c.BIRTH_NUMBER, c.PHONE_NUMBER, c.EMAIL_ADDRESS,
+                       a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE
+                FROM "User" u
+                JOIN CLIENT c ON c.USER_ID = u.USER_ID
+                JOIN ADDRESS a ON a.ADDRESS_ID = u.ADDRESS_ID
+                WHERE u.APPROVED = 'N' AND c.TELLER_ID = ?
+                ORDER BY u.SURNAME, u.NAME
+                """;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tellerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int uid = rs.getInt("USER_ID");
+                    String name = rs.getString("NAME") + " " + rs.getString("SURNAME");
+                    String birth = rs.getString("BIRTH_NUMBER");
+                    String phone = rs.getString("PHONE_NUMBER");
+                    String email = rs.getString("EMAIL_ADDRESS");
+                    String address = formatAddress(
+                            rs.getString("COUNTRY"), rs.getString("STATE"), rs.getString("CITY"),
+                            rs.getString("STREET"), rs.getInt("HOUSE_NUMBER"), rs.getInt("ZIP_CODE")
+                    );
+                    rows.add(new PendingRow(uid, name, birth, phone, email, address));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        pendingTable.setItems(rows);
+    }
+
+    private String formatAddress(String country, String state, String city, String street, int house, int zip) {
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        if (street != null && !street.isEmpty()) parts.add(street + " " + house);
+        if (city != null && !city.isEmpty()) parts.add(city);
+        if (state != null && !state.isEmpty()) parts.add(state);
+        if (country != null && !country.isEmpty()) parts.add(country);
+        if (zip > 0) parts.add(String.valueOf(zip));
+        return String.join(", ", parts);
+    }
+
+    private void approvePending(int userId) {
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET APPROVED='Y' WHERE USER_ID = ?")) {
+            ps.setInt(1, userId);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+        loadPendingRequests();
+        loadMyClients();
+    }
+
+    private void declinePending(int userId) {
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET APPROVED='R' WHERE USER_ID = ?")) {
+            ps.setInt(1, userId);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+        loadPendingRequests();
+    }
+
+    public static class PendingRow {
+        final javafx.beans.property.SimpleIntegerProperty userId = new javafx.beans.property.SimpleIntegerProperty();
+        final javafx.beans.property.SimpleStringProperty name = new javafx.beans.property.SimpleStringProperty();
+        final javafx.beans.property.SimpleStringProperty birthNumber = new javafx.beans.property.SimpleStringProperty();
+        final javafx.beans.property.SimpleStringProperty phone = new javafx.beans.property.SimpleStringProperty();
+        final javafx.beans.property.SimpleStringProperty email = new javafx.beans.property.SimpleStringProperty();
+        final javafx.beans.property.SimpleStringProperty address = new javafx.beans.property.SimpleStringProperty();
+        public PendingRow(int id, String n, String b, String p, String e, String a) {
+            userId.set(id); name.set(n); birthNumber.set(b); phone.set(p); email.set(e); address.set(a);
         }
     }
 

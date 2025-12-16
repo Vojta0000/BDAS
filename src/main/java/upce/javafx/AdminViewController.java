@@ -36,6 +36,10 @@ public class AdminViewController {
     @FXML private VBox loginsSection;
     @FXML private VBox messagesSection;
     @FXML private VBox auditsSection;
+    @FXML private VBox rolesSection;
+    @FXML private VBox addressesSection;
+    @FXML private VBox transactionTypesSection;
+    @FXML private VBox documentsSection;
 
     // Branches UI
     @FXML private TextField branchSearchField;
@@ -78,6 +82,22 @@ public class AdminViewController {
     @FXML private DatePicker messageDateFromPicker;
     @FXML private DatePicker messageDateToPicker;
 
+    // Roles UI
+    @FXML private TableView<RoleRow> rolesTable;
+
+    // Addresses UI
+    @FXML private TableView<AddressRow> addressesTable;
+
+    // Transaction types UI
+    @FXML private TableView<TransactionTypeRow> transactionTypesTable;
+
+    // Logins & Audits UI
+    @FXML private TableView<LoginRow> loginsTable;
+    @FXML private TableView<AuditRow> auditsTable;
+
+    // Documents UI
+    @FXML private TableView<DocumentRow> documentsTable;
+
     @FXML
     private void initialize() {
         // Show branches by default when admin view loads
@@ -89,6 +109,12 @@ public class AdminViewController {
         setupAccountsTable();
         setupTransactionsTable();
         setupMessagesTable();
+        setupRolesTable();
+        setupAddressesTable();
+        setupTransactionTypesTable();
+        setupLoginsTable();
+        setupAuditsTable();
+        setupDocumentsTable();
 
         if (transactionDirectionFilter != null) {
             transactionDirectionFilter.setItems(FXCollections.observableArrayList("All", "Incoming", "Outgoing"));
@@ -111,9 +137,13 @@ public class AdminViewController {
     @FXML private void showTellers() { showOnly(tellersSection); reloadTellers(); }
     @FXML private void showAccounts() { showOnly(accountsSection); reloadAccounts(); }
     @FXML private void showTransactions() { showOnly(transactionsSection); reloadTransactions(); }
-    @FXML private void showLogins() { showOnly(loginsSection); /* TODO */ }
+    @FXML private void showLogins() { showOnly(loginsSection); reloadLogins(); }
     @FXML private void showMessages() { showOnly(messagesSection); reloadMessages(); }
-    @FXML private void showAudits() { showOnly(auditsSection); /* TODO */ }
+    @FXML private void showAudits() { showOnly(auditsSection); reloadAudits(); }
+    @FXML private void showRoles() { showOnly(rolesSection); reloadRoles(); }
+    @FXML private void showAddresses() { showOnly(addressesSection); reloadAddresses(); }
+    @FXML private void showTransactionTypes() { showOnly(transactionTypesSection); reloadTransactionTypes(); }
+    @FXML private void showDocuments() { showOnly(documentsSection); reloadDocuments(); }
 
     @FXML private void onLogout() {
         if (appViewController != null) {
@@ -132,6 +162,10 @@ public class AdminViewController {
         setVisibleManaged(loginsSection, toShow == loginsSection);
         setVisibleManaged(messagesSection, toShow == messagesSection);
         setVisibleManaged(auditsSection, toShow == auditsSection);
+        setVisibleManaged(rolesSection, toShow == rolesSection);
+        setVisibleManaged(addressesSection, toShow == addressesSection);
+        setVisibleManaged(transactionTypesSection, toShow == transactionTypesSection);
+        setVisibleManaged(documentsSection, toShow == documentsSection);
     }
 
     private void setVisibleManaged(Node node, boolean value) {
@@ -139,6 +173,346 @@ public class AdminViewController {
             node.setVisible(value);
             node.setManaged(value);
         }
+    }
+
+    // ----- Roles -----
+    private boolean rolesColumnsInitialized = false;
+    private void setupRolesTable() {
+        if (rolesTable == null || rolesColumnsInitialized) return;
+        TableColumn<RoleRow, String> nameCol = new TableColumn<>("Role");
+        nameCol.setCellValueFactory(d -> d.getValue().name);
+        nameCol.setPrefWidth(200);
+
+        TableColumn<RoleRow, String> descCol = new TableColumn<>("Description");
+        descCol.setCellValueFactory(d -> d.getValue().description);
+        descCol.setPrefWidth(420);
+
+        TableColumn<RoleRow, String> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellFactory(col -> new TableCell<>() {
+            private final Button editBtn = new Button("Edit");
+            private final Button deleteBtn = new Button("Delete");
+            {
+                editBtn.setOnAction(e -> editRole(getTableView().getItems().get(getIndex())));
+                deleteBtn.setOnAction(e -> deleteRole(getTableView().getItems().get(getIndex()).roleId));
+                editBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
+                deleteBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : new HBox(6, editBtn, deleteBtn));
+            }
+        });
+        actionsCol.setPrefWidth(200);
+
+        rolesTable.getColumns().addAll(nameCol, descCol, actionsCol);
+        rolesColumnsInitialized = true;
+    }
+
+    @FXML private void reloadRoles() {
+        setupRolesTable();
+        ObservableList<RoleRow> rows = FXCollections.observableArrayList();
+        String sql = "SELECT ROLE_ID, ROLE_NAME, ROLE_DESCRIPTION FROM ROLE ORDER BY ROLE_NAME";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
+            while (rs.next()) {
+                rows.add(new RoleRow(rs.getInt(1), rs.getString(2), rs.getString(3)));
+            }
+        } catch (SQLException e){ showError("Error loading roles: "+e.getMessage()); }
+        rolesTable.setItems(rows);
+    }
+
+    @FXML private void onAddRole(){
+        Dialog<RoleEditResult> dlg = new Dialog<>(); dlg.setTitle("Add Role");
+        TextField nameF = new TextField(); TextField descF = new TextField();
+        GridPane grid = new GridPane(); grid.setHgap(8); grid.setVgap(8);
+        grid.addRow(0, new Label("Name:"), nameF);
+        grid.addRow(1, new Label("Description:"), descF);
+        dlg.getDialogPane().setContent(grid);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt==ButtonType.OK ? new RoleEditResult(nameF.getText(), descF.getText()) : null);
+        RoleEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
+        String sql = "INSERT INTO ROLE(ROLE_ID, ROLE_NAME, ROLE_DESCRIPTION) VALUES (ROLE_SEQ.NEXTVAL, ?, ?)";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            ps.setString(1, res.name); ps.setString(2, res.description); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error adding role: "+e.getMessage()); }
+        reloadRoles();
+    }
+
+    private void editRole(RoleRow row){
+        Dialog<RoleEditResult> dlg = new Dialog<>(); dlg.setTitle("Edit Role");
+        TextField nameF = new TextField(row.name.get()); TextField descF = new TextField(row.description.get());
+        GridPane grid = new GridPane(); grid.setHgap(8); grid.setVgap(8);
+        grid.addRow(0, new Label("Name:"), nameF);
+        grid.addRow(1, new Label("Description:"), descF);
+        dlg.getDialogPane().setContent(grid);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt==ButtonType.OK ? new RoleEditResult(nameF.getText(), descF.getText()) : null);
+        RoleEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
+        String sql = "UPDATE ROLE SET ROLE_NAME=?, ROLE_DESCRIPTION=? WHERE ROLE_ID=?";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            ps.setString(1, res.name); ps.setString(2, res.description); ps.setInt(3, row.roleId.get()); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error updating role: "+e.getMessage()); }
+        reloadRoles();
+    }
+
+    private void deleteRole(SimpleIntegerProperty roleId){
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM ROLE WHERE ROLE_ID=?")){
+            ps.setInt(1, roleId.get()); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error deleting role: "+e.getMessage()); }
+        reloadRoles();
+    }
+
+    // ----- Addresses -----
+    private boolean addressesColumnsInitialized = false;
+    private void setupAddressesTable(){
+        if (addressesTable == null || addressesColumnsInitialized) return;
+        TableColumn<AddressRow, String> addressCol = new TableColumn<>("Address");
+        addressCol.setCellValueFactory(d -> d.getValue().formatted);
+        addressCol.setPrefWidth(620);
+        TableColumn<AddressRow, String> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellFactory(col -> new TableCell<>(){
+            private final Button editBtn = new Button("Edit");
+            private final Button deleteBtn = new Button("Delete");
+            { editBtn.setOnAction(e -> editAddress(getTableView().getItems().get(getIndex())));
+              deleteBtn.setOnAction(e -> deleteAddress(getTableView().getItems().get(getIndex()).addressId));
+              editBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
+              deleteBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;"); }
+            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn, deleteBtn)); }
+        });
+        actionsCol.setPrefWidth(200);
+        addressesTable.getColumns().addAll(addressCol, actionsCol);
+        addressesColumnsInitialized = true;
+    }
+
+    @FXML private void reloadAddresses(){
+        setupAddressesTable();
+        ObservableList<AddressRow> rows = FXCollections.observableArrayList();
+        String sql = "SELECT ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE FROM ADDRESS ORDER BY ADDRESS_ID";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
+            while (rs.next()){
+                rows.add(new AddressRow(
+                        rs.getInt("ADDRESS_ID"),
+                        rs.getString("COUNTRY"), rs.getString("STATE"), rs.getString("CITY"),
+                        rs.getString("STREET"), rs.getInt("HOUSE_NUMBER"), rs.getInt("ZIP_CODE")
+                ));
+            }
+        } catch (SQLException e){ showError("Error loading addresses: "+e.getMessage()); }
+        addressesTable.setItems(rows);
+    }
+
+    @FXML private void onAddAddress(){
+        AddressEditResult res = promptAddress(null);
+        if (res == null) return;
+        String sqlA = "INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES (ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sqlA)){
+            ps.setString(1, res.country); ps.setString(2, res.state); ps.setString(3, res.city); ps.setString(4, res.street); ps.setInt(5, parseIntSafe(res.house)); ps.setInt(6, parseIntSafe(res.zip));
+            ps.executeUpdate();
+        } catch (SQLException e){ showError("Error adding address: "+e.getMessage()); }
+        reloadAddresses();
+    }
+
+    private void editAddress(AddressRow row){
+        AddressEditResult res = promptAddress(row);
+        if (res == null) return;
+        String sql = "UPDATE ADDRESS SET COUNTRY=?, STATE=?, CITY=?, STREET=?, HOUSE_NUMBER=?, ZIP_CODE=? WHERE ADDRESS_ID=?";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            ps.setString(1, res.country); ps.setString(2, res.state); ps.setString(3, res.city); ps.setString(4, res.street); ps.setInt(5, parseIntSafe(res.house)); ps.setInt(6, parseIntSafe(res.zip)); ps.setInt(7, row.addressId.get());
+            ps.executeUpdate();
+        } catch (SQLException e){ showError("Error updating address: "+e.getMessage()); }
+        reloadAddresses();
+    }
+
+    private void deleteAddress(SimpleIntegerProperty addressId){
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM ADDRESS WHERE ADDRESS_ID=?")){
+            ps.setInt(1, addressId.get()); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error deleting address: "+e.getMessage()); }
+        reloadAddresses();
+    }
+
+    private AddressEditResult promptAddress(AddressRow row){
+        Dialog<AddressEditResult> dlg = new Dialog<>(); dlg.setTitle(row==null? "Add Address" : "Edit Address");
+        TextField c = new TextField(row==null? "" : row.country.get());
+        TextField s = new TextField(row==null? "" : row.state.get());
+        TextField city = new TextField(row==null? "" : row.city.get());
+        TextField street = new TextField(row==null? "" : row.street.get());
+        TextField house = new TextField(row==null? "" : String.valueOf(row.house.get()));
+        TextField zip = new TextField(row==null? "" : String.valueOf(row.zip.get()));
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("Country:"), c);
+        g.addRow(1, new Label("State:"), s);
+        g.addRow(2, new Label("City:"), city);
+        g.addRow(3, new Label("Street:"), street);
+        g.addRow(4, new Label("House #:"), house);
+        g.addRow(5, new Label("ZIP:"), zip);
+        dlg.getDialogPane().setContent(g);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt==ButtonType.OK ? new AddressEditResult(c.getText(), s.getText(), city.getText(), street.getText(), house.getText(), zip.getText()) : null);
+        return dlg.showAndWait().orElse(null);
+    }
+
+    // ----- Transaction Types -----
+    private boolean trTypesColumnsInitialized = false;
+    private void setupTransactionTypesTable(){
+        if (transactionTypesTable == null || trTypesColumnsInitialized) return;
+        TableColumn<TransactionTypeRow, String> nameCol = new TableColumn<>("Type"); nameCol.setCellValueFactory(d -> d.getValue().name); nameCol.setPrefWidth(220);
+        TableColumn<TransactionTypeRow, String> descCol = new TableColumn<>("Description"); descCol.setCellValueFactory(d -> d.getValue().description); descCol.setPrefWidth(420);
+        TableColumn<TransactionTypeRow, String> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellFactory(col -> new TableCell<>(){
+            private final Button editBtn = new Button("Edit"); private final Button deleteBtn = new Button("Delete");
+            { editBtn.setOnAction(e -> editTransactionType(getTableView().getItems().get(getIndex())));
+              deleteBtn.setOnAction(e -> deleteTransactionType(getTableView().getItems().get(getIndex()).id));
+              editBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
+              deleteBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;"); }
+            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn, deleteBtn)); }
+        });
+        actionsCol.setPrefWidth(200);
+        transactionTypesTable.getColumns().addAll(nameCol, descCol, actionsCol);
+        trTypesColumnsInitialized = true;
+    }
+
+    @FXML private void reloadTransactionTypes(){
+        setupTransactionTypesTable();
+        ObservableList<TransactionTypeRow> rows = FXCollections.observableArrayList();
+        String sql = "SELECT TRANSACTION_TYPE_ID, TRANSACTION_TYPE_NAME, TRANSACTION_TYPE_DESCRIPTION FROM TRANSACTION_TYPE ORDER BY TRANSACTION_TYPE_NAME";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
+            while (rs.next()) rows.add(new TransactionTypeRow(rs.getInt(1), rs.getString(2), rs.getString(3)));
+        } catch (SQLException e){ showError("Error loading transaction types: "+e.getMessage()); }
+        transactionTypesTable.setItems(rows);
+    }
+
+    @FXML private void onAddTransactionType(){
+        Dialog<RoleEditResult> dlg = new Dialog<>(); dlg.setTitle("Add Transaction Type");
+        TextField nameF = new TextField(); TextField descF = new TextField();
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("Name:"), nameF); g.addRow(1, new Label("Description:"), descF);
+        dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt==ButtonType.OK ? new RoleEditResult(nameF.getText(), descF.getText()) : null);
+        RoleEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
+        String sql = "INSERT INTO TRANSACTION_TYPE(TRANSACTION_TYPE_ID, TRANSACTION_TYPE_NAME, TRANSACTION_TYPE_DESCRIPTION) VALUES (TRANSACTION_TYPE_SEQ.NEXTVAL, ?, ?)";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            ps.setString(1, res.name); ps.setString(2, res.description); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error adding transaction type: "+e.getMessage()); }
+        reloadTransactionTypes();
+    }
+
+    private void editTransactionType(TransactionTypeRow row){
+        Dialog<RoleEditResult> dlg = new Dialog<>(); dlg.setTitle("Edit Transaction Type");
+        TextField nameF = new TextField(row.name.get()); TextField descF = new TextField(row.description.get());
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("Name:"), nameF); g.addRow(1, new Label("Description:"), descF);
+        dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt==ButtonType.OK ? new RoleEditResult(nameF.getText(), descF.getText()) : null);
+        RoleEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
+        String sql = "UPDATE TRANSACTION_TYPE SET TRANSACTION_TYPE_NAME=?, TRANSACTION_TYPE_DESCRIPTION=? WHERE TRANSACTION_TYPE_ID=?";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            ps.setString(1, res.name); ps.setString(2, res.description); ps.setInt(3, row.id.get()); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error updating transaction type: "+e.getMessage()); }
+        reloadTransactionTypes();
+    }
+
+    private void deleteTransactionType(SimpleIntegerProperty id){
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM TRANSACTION_TYPE WHERE TRANSACTION_TYPE_ID=?")){
+            ps.setInt(1, id.get()); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error deleting transaction type: "+e.getMessage()); }
+        reloadTransactionTypes();
+    }
+
+    // ----- Logins (Login_record) -----
+    private boolean loginsColumnsInitialized = false;
+    private void setupLoginsTable(){
+        if (loginsTable == null || loginsColumnsInitialized) return;
+        TableColumn<LoginRow, String> userCol = new TableColumn<>("User"); userCol.setCellValueFactory(d -> d.getValue().userName); userCol.setPrefWidth(240);
+        TableColumn<LoginRow, String> ipCol = new TableColumn<>("IP"); ipCol.setCellValueFactory(d -> d.getValue().ip); ipCol.setPrefWidth(160);
+        TableColumn<LoginRow, String> timeCol = new TableColumn<>("Time"); timeCol.setCellValueFactory(d -> d.getValue().time); timeCol.setPrefWidth(220);
+        TableColumn<LoginRow, String> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellFactory(col -> new TableCell<>(){
+            private final Button editBtn = new Button("Edit");
+            { editBtn.setOnAction(e -> editLogin(getTableView().getItems().get(getIndex())));
+              editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;"); }
+            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn)); }
+        });
+        actionsCol.setPrefWidth(120);
+        loginsTable.getColumns().addAll(userCol, ipCol, timeCol, actionsCol);
+        loginsColumnsInitialized = true;
+    }
+
+    private void reloadLogins(){
+        setupLoginsTable();
+        ObservableList<LoginRow> rows = FXCollections.observableArrayList();
+        String sql = "SELECT l.LOGIN_ID, l.LOGIN_IP_ADDRESS, l.LOGIN_TIME, u.NAME, u.SURNAME FROM LOGIN_RECORD l JOIN \"User\" u ON u.USER_ID = l.USER_ID ORDER BY l.LOGIN_TIME DESC";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
+            while (rs.next()) rows.add(new LoginRow(rs.getInt(1), rs.getString(4)+" "+rs.getString(5), rs.getString(2), String.valueOf(rs.getTimestamp(3))));
+        } catch (SQLException e){ showError("Error loading logins: "+e.getMessage()); }
+        loginsTable.setItems(rows);
+    }
+
+    // ----- Audits -----
+    private boolean auditsColumnsInitialized = false;
+    private void setupAuditsTable(){
+        if (auditsTable == null || auditsColumnsInitialized) return;
+        TableColumn<AuditRow, String> userCol = new TableColumn<>("User"); userCol.setCellValueFactory(d -> d.getValue().userName); userCol.setPrefWidth(220);
+        TableColumn<AuditRow, String> typeCol = new TableColumn<>("Change"); typeCol.setCellValueFactory(d -> d.getValue().changeType); typeCol.setPrefWidth(200);
+        TableColumn<AuditRow, String> timeCol = new TableColumn<>("Time"); timeCol.setCellValueFactory(d -> d.getValue().time); timeCol.setPrefWidth(220);
+        TableColumn<AuditRow, String> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellFactory(col -> new TableCell<>(){
+            private final Button editBtn = new Button("Edit");
+            { editBtn.setOnAction(e -> editAudit(getTableView().getItems().get(getIndex())));
+              editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;"); }
+            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn)); }
+        });
+        actionsCol.setPrefWidth(120);
+        auditsTable.getColumns().addAll(userCol, typeCol, timeCol, actionsCol);
+        auditsColumnsInitialized = true;
+    }
+
+    private void reloadAudits(){
+        setupAuditsTable();
+        ObservableList<AuditRow> rows = FXCollections.observableArrayList();
+        String sql = "SELECT a.AUDIT_ID, a.CHANGE_TYPE, a.CHANGE_TIME, u.NAME, u.SURNAME FROM AUDIT_LOG a JOIN \"User\" u ON u.USER_ID = a.USER_ID ORDER BY a.CHANGE_TIME DESC";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
+            while (rs.next()) rows.add(new AuditRow(rs.getInt(1), rs.getString(4)+" "+rs.getString(5), rs.getString(2), String.valueOf(rs.getTimestamp(3))));
+        } catch (SQLException e){ showError("Error loading audits: "+e.getMessage()); }
+        auditsTable.setItems(rows);
+    }
+
+    // ----- Documents -----
+    private boolean documentsColumnsInitialized = false;
+    private void setupDocumentsTable(){
+        if (documentsTable == null || documentsColumnsInitialized) return;
+        TableColumn<DocumentRow, String> nameCol = new TableColumn<>("File"); nameCol.setCellValueFactory(d -> d.getValue().fileName); nameCol.setPrefWidth(280);
+        TableColumn<DocumentRow, String> extCol = new TableColumn<>("Ext"); extCol.setCellValueFactory(d -> d.getValue().extension); extCol.setPrefWidth(80);
+        TableColumn<DocumentRow, String> userCol = new TableColumn<>("User"); userCol.setCellValueFactory(d -> d.getValue().userName); userCol.setPrefWidth(240);
+        TableColumn<DocumentRow, String> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellFactory(col -> new TableCell<>(){
+            private final Button editBtn = new Button("Edit");
+            private final Button deleteBtn = new Button("Delete");
+            { editBtn.setOnAction(e -> editDocument(getTableView().getItems().get(getIndex())));
+              deleteBtn.setOnAction(e -> deleteDocument(getTableView().getItems().get(getIndex()).documentId));
+              editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;");
+              deleteBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;"); }
+            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn, deleteBtn)); }
+        });
+        actionsCol.setPrefWidth(120);
+        documentsTable.getColumns().addAll(nameCol, extCol, userCol, actionsCol);
+        documentsColumnsInitialized = true;
+    }
+
+    private void reloadDocuments(){
+        setupDocumentsTable();
+        ObservableList<DocumentRow> rows = FXCollections.observableArrayList();
+        String sql = "SELECT d.DOCUMENT_ID, d.FILE_NAME, d.FILE_EXTENSION, u.NAME, u.SURNAME FROM DOCUMENT d JOIN \"User\" u ON u.USER_ID = d.USER_ID ORDER BY d.DOCUMENT_ID DESC";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
+            while (rs.next()) rows.add(new DocumentRow(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4)+" "+rs.getString(5)));
+        } catch (SQLException e){ showError("Error loading documents: "+e.getMessage()); }
+        documentsTable.setItems(rows);
+    }
+
+    private void deleteDocument(SimpleIntegerProperty id){
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM DOCUMENT WHERE DOCUMENT_ID=?")){
+            ps.setInt(1, id.get()); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error deleting document: "+e.getMessage()); }
+        reloadDocuments();
     }
 
     // ----- Branches -----
@@ -341,6 +715,10 @@ public class AdminViewController {
         roleCol.setCellValueFactory(d -> d.getValue().roleNameProperty);
         roleCol.setPrefWidth(120);
 
+        TableColumn<UserRow, String> approvedCol = new TableColumn<>("Approved");
+        approvedCol.setCellValueFactory(d -> d.getValue().approvedProperty);
+        approvedCol.setPrefWidth(90);
+
         TableColumn<UserRow, String> addressCol = new TableColumn<>("Address");
         addressCol.setCellValueFactory(d -> d.getValue().addressTextProperty);
         addressCol.setPrefWidth(320);
@@ -350,6 +728,7 @@ public class AdminViewController {
             private final Button editBtn = new Button("Edit");
             private final Button deleteBtn = new Button("Delete");
             private final Button emulateBtn = new Button("Emulate");
+            private final Button approveBtn = new Button("Approve");
             {
                 editBtn.setOnAction(e -> editUser(getTableView().getItems().get(getIndex())));
                 deleteBtn.setOnAction(e -> deleteUser(getTableView().getItems().get(getIndex()).userId));
@@ -366,9 +745,11 @@ public class AdminViewController {
                         }
                     }
                 });
+                approveBtn.setOnAction(e -> approveUser(getTableView().getItems().get(getIndex()).userId));
                 editBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
                 deleteBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
                 emulateBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white;");
+                approveBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
             }
 
             @Override
@@ -380,14 +761,16 @@ public class AdminViewController {
                     UserRow row = getTableView().getItems().get(getIndex());
                     boolean emulateEnabled = row != null && ("Client".equalsIgnoreCase(row.roleNameProperty.get()) || "Teller".equalsIgnoreCase(row.roleNameProperty.get()));
                     emulateBtn.setDisable(!emulateEnabled);
-                    HBox box = new HBox(6, editBtn, deleteBtn, emulateBtn);
+                    // Only show Approve when not approved
+                    approveBtn.setDisable(row == null || "Y".equalsIgnoreCase(row.approvedProperty.get()));
+                    HBox box = new HBox(6, editBtn, deleteBtn, emulateBtn, approveBtn);
                     setGraphic(box);
                 }
             }
         });
-        actionsCol.setPrefWidth(260);
+        actionsCol.setPrefWidth(360);
 
-        usersTable.getColumns().addAll(nameCol, surnameCol, roleCol, addressCol, actionsCol);
+        usersTable.getColumns().addAll(nameCol, surnameCol, roleCol, approvedCol, addressCol, actionsCol);
         usersColumnsInitialized = true;
     }
 
@@ -398,7 +781,7 @@ public class AdminViewController {
         String surnameFilter = userSurnameSearchField != null ? userSurnameSearchField.getText() : null;
         ObservableList<UserRow> rows = FXCollections.observableArrayList();
         String sql = """
-                SELECT u.USER_ID, u.NAME, u.SURNAME, r.ROLE_NAME,
+                SELECT u.USER_ID, u.NAME, u.SURNAME, u.APPROVED, r.ROLE_NAME,
                        a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE
                 FROM "User" u
                 JOIN ROLE r ON u.ROLE_ID = r.ROLE_ID
@@ -422,18 +805,28 @@ public class AdminViewController {
                     int id = rs.getInt("USER_ID");
                     String name = rs.getString("NAME");
                     String surname = rs.getString("SURNAME");
+                    String approved = null; try { approved = rs.getString("APPROVED"); } catch (SQLException ignore) {}
                     String role = rs.getString("ROLE_NAME");
                     String address = formatAddress(
                             rs.getString("COUNTRY"), rs.getString("STATE"), rs.getString("CITY"),
                             rs.getString("STREET"), rs.getInt("HOUSE_NUMBER"), rs.getInt("ZIP_CODE")
                     );
-                    rows.add(new UserRow(id, name, surname, role, address));
+                    rows.add(new UserRow(id, name, surname, role, approved == null? "?" : approved, address));
                 }
             }
         } catch (SQLException e) {
             showError("Error loading users: " + e.getMessage());
         }
         usersTable.setItems(rows);
+    }
+
+    private void approveUser(SimpleIntegerProperty userId){
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET APPROVED='Y' WHERE USER_ID = ?")){
+            ps.setInt(1, userId.get());
+            ps.executeUpdate();
+        } catch (SQLException e){ showError("Error approving user: "+e.getMessage()); }
+        reloadUsers();
     }
 
     // Stubs for yet-to-implement sections to satisfy FXML onAction hooks
@@ -864,10 +1257,14 @@ public class AdminViewController {
 
     private void editTransaction(TransactionRow row){
         Dialog<TransactionEditResult> dlg = new Dialog<>(); dlg.setTitle("Edit Transaction");
-        ComboBox<String> typeBox = new ComboBox<>(loadTransactionTypeNames()); typeBox.getSelectionModel().selectFirst();
+        ComboBox<String> typeBox = new ComboBox<>(loadTransactionTypeNames());
+        if (row.typeName!=null) typeBox.getSelectionModel().select(row.typeName.get()); else typeBox.getSelectionModel().selectFirst();
         TextField amountF = new TextField(row.amount.get());
         ComboBox<AccountOption> fromBox = new ComboBox<>(loadAccounts());
         ComboBox<AccountOption> toBox = new ComboBox<>(loadAccounts());
+        // Preselect accounts based on account numbers in the row
+        if (row.fromAcc != null){ for (AccountOption a : fromBox.getItems()) if (a != null && a.toString().equals(row.fromAcc.get())) { fromBox.getSelectionModel().select(a); break; } }
+        if (row.toAcc != null){ for (AccountOption a : toBox.getItems()) if (a != null && a.toString().equals(row.toAcc.get())) { toBox.getSelectionModel().select(a); break; } }
         GridPane grid = new GridPane(); grid.setHgap(8); grid.setVgap(8);
         grid.addRow(0, new Label("Type:"), typeBox);
         grid.addRow(1, new Label("Amount:"), amountF);
@@ -906,9 +1303,13 @@ public class AdminViewController {
         TableColumn<MessageRow,String> textCol = new TableColumn<>("Text"); textCol.setCellValueFactory(d->d.getValue().text); textCol.setPrefWidth(420);
         TableColumn<MessageRow,String> actionsCol = new TableColumn<>("Actions");
         actionsCol.setCellFactory(col-> new TableCell<>(){
+            private final Button editBtn = new Button("Edit");
             private final Button deleteBtn = new Button("Delete");
-            { deleteBtn.setOnAction(e-> deleteMessage(getTableView().getItems().get(getIndex()).messageId)); deleteBtn.setStyle("-fx-background-color:#e74c3c;-fx-text-fill:white;"); }
-            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, deleteBtn)); }
+            { editBtn.setOnAction(e-> editMessage(getTableView().getItems().get(getIndex())));
+              deleteBtn.setOnAction(e-> deleteMessage(getTableView().getItems().get(getIndex()).messageId));
+              editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;");
+              deleteBtn.setStyle("-fx-background-color:#e74c3c;-fx-text-fill:white;"); }
+            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn, deleteBtn)); }
         });
         actionsCol.setPrefWidth(120);
         messagesTable.getColumns().addAll(fromCol,toCol,textCol,actionsCol);
@@ -971,6 +1372,69 @@ public class AdminViewController {
         reloadMessages();
     }
 
+    private void editMessage(MessageRow baseRow){
+        // Load full message details to prefill
+        int mid = baseRow.messageId.get();
+        String txt = baseRow.text.get();
+        String read = "N"; Integer fromId = null; Integer toId = null; java.sql.Timestamp sentAt = null;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT MESSAGE_TEXT, MESSAGE_READ, USER_FROM_ID, USER_TO_ID, MESSAGE_SENT_AT FROM MESSAGE WHERE MESSAGE_ID = ?")){
+            ps.setInt(1, mid);
+            try (ResultSet rs = ps.executeQuery()){
+                if (rs.next()){
+                    txt = rs.getString(1);
+                    read = rs.getString(2);
+                    fromId = rs.getObject(3) == null? null : rs.getInt(3);
+                    toId = rs.getObject(4) == null? null : rs.getInt(4);
+                    sentAt = rs.getTimestamp(5);
+                }
+            }
+        } catch (SQLException ignore) {}
+
+        Dialog<Boolean> dlg = new Dialog<>(); dlg.setTitle("Edit Message");
+        ComboBox<UserOption> fromBox = new ComboBox<>(loadAllUsers());
+        ComboBox<UserOption> toBox = new ComboBox<>(loadAllUsers());
+        // Add a synthetic NULL sender option
+        fromBox.getItems().add(0, new UserOption(-1, "<System / NULL>"));
+        if (fromId != null){
+            for (UserOption u : fromBox.getItems()) if (u.userId == fromId){ fromBox.getSelectionModel().select(u); break; }
+        } else {
+            fromBox.getSelectionModel().select(0);
+        }
+        if (toId != null){ for (UserOption u : toBox.getItems()) if (u.userId == toId){ toBox.getSelectionModel().select(u); break; } }
+        TextArea textF = new TextArea(txt);
+        ComboBox<String> readBox = new ComboBox<>(FXCollections.observableArrayList("Y","N"));
+        readBox.getSelectionModel().select(read != null && read.equalsIgnoreCase("Y")? "Y":"N");
+        TextField timeF = new TextField(sentAt==null? "" : sentAt.toString().substring(0,19)); // yyyy-MM-dd HH:mm:ss
+
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("From:"), fromBox);
+        g.addRow(1, new Label("To:"), toBox);
+        g.addRow(2, new Label("Text:"), textF);
+        g.addRow(3, new Label("Read (Y/N):"), readBox);
+        g.addRow(4, new Label("Sent at (yyyy-MM-dd HH:mm:ss):"), timeF);
+        dlg.getDialogPane().setContent(g);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Boolean ok = dlg.showAndWait().orElse(false); if (!ok) return;
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE MESSAGE SET USER_FROM_ID = ?, USER_TO_ID = ?, MESSAGE_TEXT = ?, MESSAGE_READ = ?, MESSAGE_SENT_AT = ? WHERE MESSAGE_ID = ?")){
+            UserOption f = fromBox.getValue();
+            UserOption t = toBox.getValue();
+            if (t == null){ showError("Recipient is required."); return; }
+            ps.setObject(1, (f==null || f.userId==-1)? null : f.userId);
+            ps.setInt(2, t.userId);
+            ps.setString(3, textF.getText());
+            ps.setString(4, readBox.getValue());
+            java.sql.Timestamp ts;
+            try { ts = java.sql.Timestamp.valueOf(timeF.getText().trim()); } catch (Exception ex){ ts = new java.sql.Timestamp(System.currentTimeMillis()); }
+            ps.setTimestamp(5, ts);
+            ps.setInt(6, mid);
+            ps.executeUpdate();
+        } catch (SQLException e){ showError("Error updating message: "+e.getMessage()); }
+        reloadMessages();
+    }
+
     private void editUser(UserRow row) {
         Dialog<UserEditResult> dialog = new Dialog<>();
         dialog.setTitle("Edit User");
@@ -984,6 +1448,10 @@ public class AdminViewController {
         roleBox.setItems(loadRoles());
         roleBox.getSelectionModel().select(findRole(roleBox.getItems(), row.roleNameProperty.get()));
 
+        Label approvedL = new Label("Approved (Y/N/R):");
+        ComboBox<String> approvedBox = new ComboBox<>(FXCollections.observableArrayList("Y","N","R"));
+        approvedBox.getSelectionModel().select(row.approvedProperty.get());
+
         Label cL = new Label("Country:"); TextField cF = new TextField();
         Label sL = new Label("State:");   TextField sF = new TextField();
         Label cityL = new Label("City:");  TextField cityF = new TextField();
@@ -991,16 +1459,29 @@ public class AdminViewController {
         Label houseL = new Label("House No:"); TextField houseF = new TextField();
         Label zipL = new Label("ZIP:"); TextField zipF = new TextField();
 
+        // Pre-fill address by querying current address of the user
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT a.COUNTRY,a.STATE,a.CITY,a.STREET,a.HOUSE_NUMBER,a.ZIP_CODE FROM \"User\" u JOIN ADDRESS a ON u.ADDRESS_ID=a.ADDRESS_ID WHERE u.USER_ID = ?")){
+            ps.setInt(1, row.userId.get());
+            try (ResultSet rs = ps.executeQuery()){
+                if (rs.next()){
+                    cF.setText(rs.getString(1)); sF.setText(rs.getString(2)); cityF.setText(rs.getString(3));
+                    streetF.setText(rs.getString(4)); houseF.setText(String.valueOf(rs.getInt(5))); zipF.setText(String.valueOf(rs.getInt(6)));
+                }
+            }
+        } catch (SQLException ignore) {}
+
         GridPane grid = new GridPane(); grid.setHgap(8); grid.setVgap(8);
         grid.addRow(0, nameL, nameF);
         grid.addRow(1, surnameL, surnameF);
         grid.addRow(2, roleL, roleBox);
-        grid.addRow(3, cL, cF);
-        grid.addRow(4, sL, sF);
-        grid.addRow(5, cityL, cityF);
-        grid.addRow(6, streetL, streetF);
-        grid.addRow(7, houseL, houseF);
-        grid.addRow(8, zipL, zipF);
+        grid.addRow(3, approvedL, approvedBox);
+        grid.addRow(4, cL, cF);
+        grid.addRow(5, sL, sF);
+        grid.addRow(6, cityL, cityF);
+        grid.addRow(7, streetL, streetF);
+        grid.addRow(8, houseL, houseF);
+        grid.addRow(9, zipL, zipF);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -1030,12 +1511,13 @@ public class AdminViewController {
                 newAddrId = rs.getInt("ID");
             }
             try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE \"User\" SET NAME = ?, SURNAME = ?, ROLE_ID = ?, ADDRESS_ID = ? WHERE USER_ID = ?")) {
+                    "UPDATE \"User\" SET NAME = ?, SURNAME = ?, ROLE_ID = ?, ADDRESS_ID = ?, APPROVED = ? WHERE USER_ID = ?")) {
                 ps.setString(1, res.name);
                 ps.setString(2, res.surname);
                 ps.setInt(3, res.role.id);
                 ps.setInt(4, newAddrId);
-                ps.setInt(5, row.userId.get());
+                ps.setString(5, approvedBox.getValue());
+                ps.setInt(6, row.userId.get());
                 ps.executeUpdate();
             }
             conn.commit();
@@ -1043,6 +1525,89 @@ public class AdminViewController {
             showError("Error updating user: " + e.getMessage());
         }
         reloadUsers();
+    }
+
+    // Helpers to load all users for combos
+    private ObservableList<UserOption> loadAllUsers(){
+        ObservableList<UserOption> list = FXCollections.observableArrayList();
+        String sql = "SELECT USER_ID, NAME, SURNAME FROM \"User\" ORDER BY SURNAME, NAME";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
+            while (rs.next()) list.add(new UserOption(rs.getInt(1), rs.getString(2)+" "+rs.getString(3)));
+        } catch (SQLException ignore) {}
+        return list;
+    }
+
+    private void editLogin(LoginRow row){
+        // Fetch values
+        int id = row.id.get(); Integer userId = null; String ip = row.ip.get(); java.sql.Timestamp ts = null;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT USER_ID, LOGIN_IP_ADDRESS, LOGIN_TIME FROM LOGIN_RECORD WHERE LOGIN_ID = ?")){
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()){
+                if (rs.next()){ userId = rs.getInt(1); ip = rs.getString(2); ts = rs.getTimestamp(3); }
+            }
+        } catch (SQLException ignore) {}
+        ComboBox<UserOption> userBox = new ComboBox<>(loadAllUsers()); if (userId!=null){ for (UserOption u : userBox.getItems()) if (u.userId==userId){ userBox.getSelectionModel().select(u); break; } }
+        TextField ipF = new TextField(ip==null? "" : ip);
+        TextField timeF = new TextField(ts==null? "" : ts.toString().substring(0,19));
+        Dialog<Boolean> dlg = new Dialog<>(); dlg.setTitle("Edit Login Record");
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("User:"), userBox);
+        g.addRow(1, new Label("IP:"), ipF);
+        g.addRow(2, new Label("Time (yyyy-MM-dd HH:mm:ss):"), timeF);
+        dlg.getDialogPane().setContent(g);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        if (!dlg.showAndWait().orElse(false)) return;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE LOGIN_RECORD SET USER_ID=?, LOGIN_IP_ADDRESS=?, LOGIN_TIME=? WHERE LOGIN_ID=?")){
+            UserOption u = userBox.getValue(); if (u==null){ showError("User required"); return; }
+            ps.setInt(1, u.userId); ps.setString(2, ipF.getText());
+            java.sql.Timestamp nts; try { nts = java.sql.Timestamp.valueOf(timeF.getText().trim()); } catch (Exception ex){ nts = new java.sql.Timestamp(System.currentTimeMillis()); }
+            ps.setTimestamp(3, nts); ps.setInt(4, id); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error updating login: "+e.getMessage()); }
+        reloadLogins();
+    }
+
+    private void editAudit(AuditRow row){
+        int id = row.id.get(); Integer userId = null; String change = row.changeType.get(); java.sql.Timestamp ts = null;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT USER_ID, CHANGE_TYPE, CHANGE_TIME FROM AUDIT_LOG WHERE AUDIT_ID=?")){
+            ps.setInt(1, id); try (ResultSet rs = ps.executeQuery()){ if (rs.next()){ userId = rs.getInt(1); change = rs.getString(2); ts = rs.getTimestamp(3);} }
+        } catch (SQLException ignore) {}
+        ComboBox<UserOption> userBox = new ComboBox<>(loadAllUsers()); if (userId!=null){ for (UserOption u : userBox.getItems()) if (u.userId==userId){ userBox.getSelectionModel().select(u); break; } }
+        TextField changeF = new TextField(change==null? "" : change);
+        TextField timeF = new TextField(ts==null? "" : ts.toString().substring(0,19));
+        Dialog<Boolean> dlg = new Dialog<>(); dlg.setTitle("Edit Audit Log"); GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("User:"), userBox);
+        g.addRow(1, new Label("Change type:"), changeF);
+        g.addRow(2, new Label("Time (yyyy-MM-dd HH:mm:ss):"), timeF);
+        dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        if (!dlg.showAndWait().orElse(false)) return;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE AUDIT_LOG SET USER_ID=?, CHANGE_TYPE=?, CHANGE_TIME=? WHERE AUDIT_ID=?")){
+            UserOption u = userBox.getValue(); if (u==null){ showError("User required"); return; }
+            ps.setInt(1, u.userId); ps.setString(2, changeF.getText());
+            java.sql.Timestamp nts; try { nts = java.sql.Timestamp.valueOf(timeF.getText().trim()); } catch (Exception ex){ nts = new java.sql.Timestamp(System.currentTimeMillis()); }
+            ps.setTimestamp(3, nts); ps.setInt(4, id); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error updating audit: "+e.getMessage()); }
+        reloadAudits();
+    }
+
+    private void editDocument(DocumentRow row){
+        int id = row.documentId.get(); String fn = row.fileName.get(); String ext = row.extension.get(); Integer userId = null;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT FILE_NAME, FILE_EXTENSION, USER_ID FROM DOCUMENT WHERE DOCUMENT_ID=?")){
+            ps.setInt(1, id); try (ResultSet rs = ps.executeQuery()){ if (rs.next()){ fn = rs.getString(1); ext = rs.getString(2); userId = rs.getInt(3);} }
+        } catch (SQLException ignore) {}
+        TextField fnF = new TextField(fn==null? "" : fn);
+        TextField extF = new TextField(ext==null? "" : ext);
+        ComboBox<UserOption> userBox = new ComboBox<>(loadAllUsers()); if (userId!=null){ for (UserOption u : userBox.getItems()) if (u.userId==userId){ userBox.getSelectionModel().select(u); break; } }
+        Dialog<Boolean> dlg = new Dialog<>(); dlg.setTitle("Edit Document"); GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("File name:"), fnF);
+        g.addRow(1, new Label("Extension:"), extF);
+        g.addRow(2, new Label("Owner:"), userBox);
+        dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        if (!dlg.showAndWait().orElse(false)) return;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE DOCUMENT SET FILE_NAME=?, FILE_EXTENSION=?, USER_ID=? WHERE DOCUMENT_ID=?")){
+            UserOption u = userBox.getValue(); if (u==null){ showError("Owner required"); return; }
+            ps.setString(1, fnF.getText()); ps.setString(2, extF.getText()); ps.setInt(3, u.userId); ps.setInt(4, id); ps.executeUpdate();
+        } catch (SQLException e){ showError("Error updating document: "+e.getMessage()); }
+        reloadDocuments();
     }
 
     private void deleteUser(SimpleIntegerProperty userId) {
@@ -1229,12 +1794,14 @@ public class AdminViewController {
         final SimpleStringProperty nameProperty = new SimpleStringProperty();
         final SimpleStringProperty surnameProperty = new SimpleStringProperty();
         final SimpleStringProperty roleNameProperty = new SimpleStringProperty();
+        final SimpleStringProperty approvedProperty = new SimpleStringProperty();
         final SimpleStringProperty addressTextProperty = new SimpleStringProperty();
-        public UserRow(int id, String name, String surname, String role, String address) {
+        public UserRow(int id, String name, String surname, String role, String approved, String address) {
             userId.set(id);
             nameProperty.set(name);
             surnameProperty.set(surname);
             roleNameProperty.set(role);
+            approvedProperty.set(approved);
             addressTextProperty.set(address);
         }
     }
@@ -1277,6 +1844,55 @@ public class AdminViewController {
         final SimpleStringProperty text = new SimpleStringProperty();
         public MessageRow(int id, String from, String to, String text){ this.messageId.set(id); this.fromName.set(from); this.toName.set(to); this.text.set(text);}    }
 
+    // New simple row models for added admin sections
+    public static class RoleRow {
+        final SimpleIntegerProperty roleId = new SimpleIntegerProperty();
+        final SimpleStringProperty name = new SimpleStringProperty();
+        final SimpleStringProperty description = new SimpleStringProperty();
+        public RoleRow(int id, String n, String d){ this.roleId.set(id); this.name.set(n); this.description.set(d);} }
+
+    public static class AddressRow {
+        final SimpleIntegerProperty addressId = new SimpleIntegerProperty();
+        final SimpleStringProperty country = new SimpleStringProperty();
+        final SimpleStringProperty state = new SimpleStringProperty();
+        final SimpleStringProperty city = new SimpleStringProperty();
+        final SimpleStringProperty street = new SimpleStringProperty();
+        final SimpleIntegerProperty house = new SimpleIntegerProperty();
+        final SimpleIntegerProperty zip = new SimpleIntegerProperty();
+        final SimpleStringProperty formatted = new SimpleStringProperty();
+        public AddressRow(int id, String c, String s, String city, String st, int house, int zip){
+            this.addressId.set(id); this.country.set(c); this.state.set(s); this.city.set(city); this.street.set(st); this.house.set(house); this.zip.set(zip);
+            this.formatted.set((st!=null? st:"")+" "+house+", "+(city!=null? city:"")+", "+(s!=null? s:"")+", "+(c!=null? c:"")+" "+zip);
+        }
+    }
+
+    public static class TransactionTypeRow {
+        final SimpleIntegerProperty id = new SimpleIntegerProperty();
+        final SimpleStringProperty name = new SimpleStringProperty();
+        final SimpleStringProperty description = new SimpleStringProperty();
+        public TransactionTypeRow(int id, String n, String d){ this.id.set(id); this.name.set(n); this.description.set(d);} }
+
+    public static class LoginRow {
+        final SimpleIntegerProperty id = new SimpleIntegerProperty();
+        final SimpleStringProperty userName = new SimpleStringProperty();
+        final SimpleStringProperty ip = new SimpleStringProperty();
+        final SimpleStringProperty time = new SimpleStringProperty();
+        public LoginRow(int id, String user, String ip, String time){ this.id.set(id); this.userName.set(user); this.ip.set(ip); this.time.set(time);} }
+
+    public static class AuditRow {
+        final SimpleIntegerProperty id = new SimpleIntegerProperty();
+        final SimpleStringProperty userName = new SimpleStringProperty();
+        final SimpleStringProperty changeType = new SimpleStringProperty();
+        final SimpleStringProperty time = new SimpleStringProperty();
+        public AuditRow(int id, String user, String type, String time){ this.id.set(id); this.userName.set(user); this.changeType.set(type); this.time.set(time);} }
+
+    public static class DocumentRow {
+        final SimpleIntegerProperty documentId = new SimpleIntegerProperty();
+        final SimpleStringProperty fileName = new SimpleStringProperty();
+        final SimpleStringProperty extension = new SimpleStringProperty();
+        final SimpleStringProperty userName = new SimpleStringProperty();
+        public DocumentRow(int id, String fn, String ext, String user){ this.documentId.set(id); this.fileName.set(fn); this.extension.set(ext); this.userName.set(user);} }
+
     private static class RoleOption {
         final int id; final String name;
         RoleOption(int id, String name) { this.id = id; this.name = name; }
@@ -1302,6 +1918,9 @@ public class AdminViewController {
             this.country = country; this.state = state; this.city = city; this.street = street; this.house = house; this.zip = zip;
         }
     }
+
+    private static class RoleEditResult { final String name; final String description; RoleEditResult(String n, String d){ this.name=n; this.description=d; } }
+    private static class AddressEditResult { final String country, state, city, street, house, zip; AddressEditResult(String c, String s, String ci, String st, String h, String z){ this.country=c; this.state=s; this.city=ci; this.street=st; this.house=h; this.zip=z; } }
 
     private void showError(String msg) {
         Alert a = new Alert(Alert.AlertType.ERROR);
