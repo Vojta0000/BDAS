@@ -148,6 +148,8 @@
                                 style="-fx-background-color: #5dade2; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 20;"/>
                         <Button fx:id="openClientDocsButton" text="Documents"
                                 style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 20;"/>
+                        <Button fx:id="createAccountButton" text="Create Account"
+                                style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 20;"/>
                     </HBox>
                 </VBox>
             </VBox>

@@ -98,6 +98,23 @@ public class AdminViewController {
     // Documents UI
     @FXML private TableView<DocumentRow> documentsTable;
 
+    // --- Newly added filter inputs (Logins, Audits, Documents) ---
+    // Logins filters
+    @FXML private TextField  loginUserSearchField;
+    @FXML private TextField  loginIpSearchField;
+    @FXML private DatePicker loginDateFromPicker;
+    @FXML private DatePicker loginDateToPicker;
+
+    // Audits filters
+    @FXML private TextField  auditUserSearchField;
+    @FXML private TextField  auditChangeSearchField;
+    @FXML private DatePicker auditDateFromPicker;
+    @FXML private DatePicker auditDateToPicker;
+
+    // Documents filters
+    @FXML private TextField documentUserSearchField;
+    @FXML private TextField documentExtensionSearchField;
+
     @FXML
     private void initialize() {
         // Show branches by default when admin view loads
@@ -437,13 +454,57 @@ public class AdminViewController {
         loginsColumnsInitialized = true;
     }
 
+    @FXML
     private void reloadLogins(){
         setupLoginsTable();
         ObservableList<LoginRow> rows = FXCollections.observableArrayList();
-        String sql = "SELECT l.LOGIN_ID, l.LOGIN_IP_ADDRESS, l.LOGIN_TIME, u.NAME, u.SURNAME FROM LOGIN_RECORD l JOIN \"User\" u ON u.USER_ID = l.USER_ID ORDER BY l.LOGIN_TIME DESC";
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
-            while (rs.next()) rows.add(new LoginRow(rs.getInt(1), rs.getString(4)+" "+rs.getString(5), rs.getString(2), String.valueOf(rs.getTimestamp(3))));
-        } catch (SQLException e){ showError("Error loading logins: "+e.getMessage()); }
+
+        String userFilter = (loginUserSearchField != null) ? loginUserSearchField.getText() : null;
+        String ipFilter   = (loginIpSearchField != null) ? loginIpSearchField.getText() : null;
+        java.sql.Date dFrom = (loginDateFromPicker != null && loginDateFromPicker.getValue() != null)
+                ? java.sql.Date.valueOf(loginDateFromPicker.getValue()) : null;
+        java.sql.Date dTo   = (loginDateToPicker != null && loginDateToPicker.getValue() != null)
+                ? java.sql.Date.valueOf(loginDateToPicker.getValue()) : null;
+
+        String sql =
+                "SELECT l.LOGIN_ID, l.LOGIN_IP_ADDRESS, l.LOGIN_TIME, u.NAME, u.SURNAME\n" +
+                "FROM LOGIN_RECORD l JOIN \"User\" u ON u.USER_ID = l.USER_ID\n" +
+                "WHERE ( ? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ? OR UPPER(u.SURNAME) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR ? = '' OR UPPER(l.LOGIN_IP_ADDRESS) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR l.LOGIN_TIME >= ? )\n" +
+                "  AND ( ? IS NULL OR l.LOGIN_TIME <  ? + 1 )\n" +
+                "ORDER BY l.LOGIN_TIME DESC";
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String userLike = (userFilter == null || userFilter.isEmpty()) ? null : (userFilter.trim().toUpperCase() + "%");
+            String ipLike   = (ipFilter == null   || ipFilter.isEmpty())   ? null : (ipFilter.trim().toUpperCase() + "%");
+
+            ps.setString(1, userFilter);
+            ps.setString(2, userFilter);
+            ps.setString(3, userLike);
+            ps.setString(4, userLike);
+            ps.setString(5, ipFilter);
+            ps.setString(6, ipFilter);
+            ps.setString(7, ipLike);
+            ps.setDate(8, dFrom);
+            ps.setDate(9, dFrom);
+            ps.setDate(10, dTo);
+            ps.setDate(11, dTo);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new LoginRow(
+                            rs.getInt(1),
+                            rs.getString(4) + " " + rs.getString(5),
+                            rs.getString(2),
+                            String.valueOf(rs.getTimestamp(3))
+                    ));
+                }
+            }
+        } catch (SQLException e) { showError("Error loading logins: " + e.getMessage()); }
+
         loginsTable.setItems(rows);
     }
 
@@ -466,13 +527,56 @@ public class AdminViewController {
         auditsColumnsInitialized = true;
     }
 
+    @FXML
     private void reloadAudits(){
         setupAuditsTable();
         ObservableList<AuditRow> rows = FXCollections.observableArrayList();
-        String sql = "SELECT a.AUDIT_ID, a.CHANGE_TYPE, a.CHANGE_TIME, u.NAME, u.SURNAME FROM AUDIT_LOG a JOIN \"User\" u ON u.USER_ID = a.USER_ID ORDER BY a.CHANGE_TIME DESC";
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
-            while (rs.next()) rows.add(new AuditRow(rs.getInt(1), rs.getString(4)+" "+rs.getString(5), rs.getString(2), String.valueOf(rs.getTimestamp(3))));
-        } catch (SQLException e){ showError("Error loading audits: "+e.getMessage()); }
+
+        String userFilter   = (auditUserSearchField != null) ? auditUserSearchField.getText() : null;
+        String changeFilter = (auditChangeSearchField != null) ? auditChangeSearchField.getText() : null;
+        java.sql.Date dFrom = (auditDateFromPicker != null && auditDateFromPicker.getValue() != null)
+                ? java.sql.Date.valueOf(auditDateFromPicker.getValue()) : null;
+        java.sql.Date dTo   = (auditDateToPicker != null && auditDateToPicker.getValue() != null)
+                ? java.sql.Date.valueOf(auditDateToPicker.getValue()) : null;
+
+        String sql =
+                "SELECT a.AUDIT_ID, a.CHANGE_TYPE, a.CHANGE_TIME, u.NAME, u.SURNAME\n" +
+                "FROM AUDIT_LOG a JOIN \"User\" u ON u.USER_ID = a.USER_ID\n" +
+                "WHERE ( ? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ? OR UPPER(u.SURNAME) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR ? = '' OR UPPER(a.CHANGE_TYPE) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR a.CHANGE_TIME >= ? )\n" +
+                "  AND ( ? IS NULL OR a.CHANGE_TIME <  ? + 1 )\n" +
+                "ORDER BY a.CHANGE_TIME DESC";
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String userLike   = (userFilter == null   || userFilter.isEmpty())   ? null : (userFilter.trim().toUpperCase() + "%");
+            String changeLike = (changeFilter == null || changeFilter.isEmpty()) ? null : ("%" + changeFilter.trim().toUpperCase() + "%");
+
+            ps.setString(1, userFilter);
+            ps.setString(2, userFilter);
+            ps.setString(3, userLike);
+            ps.setString(4, userLike);
+            ps.setString(5, changeFilter);
+            ps.setString(6, changeFilter);
+            ps.setString(7, changeLike);
+            ps.setDate(8, dFrom);
+            ps.setDate(9, dFrom);
+            ps.setDate(10, dTo);
+            ps.setDate(11, dTo);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new AuditRow(
+                            rs.getInt(1),
+                            rs.getString(4) + " " + rs.getString(5),
+                            rs.getString(2),
+                            String.valueOf(rs.getTimestamp(3))
+                    ));
+                }
+            }
+        } catch (SQLException e){ showError("Error loading audits: " + e.getMessage()); }
         auditsTable.setItems(rows);
     }
 
@@ -498,15 +602,58 @@ public class AdminViewController {
         documentsColumnsInitialized = true;
     }
 
+    @FXML
     private void reloadDocuments(){
         setupDocumentsTable();
         ObservableList<DocumentRow> rows = FXCollections.observableArrayList();
-        String sql = "SELECT d.DOCUMENT_ID, d.FILE_NAME, d.FILE_EXTENSION, u.NAME, u.SURNAME FROM DOCUMENT d JOIN \"User\" u ON u.USER_ID = d.USER_ID ORDER BY d.DOCUMENT_ID DESC";
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()){
-            while (rs.next()) rows.add(new DocumentRow(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4)+" "+rs.getString(5)));
-        } catch (SQLException e){ showError("Error loading documents: "+e.getMessage()); }
+
+        String userFilter = (documentUserSearchField != null) ? documentUserSearchField.getText() : null;
+        String extFilter  = (documentExtensionSearchField != null) ? documentExtensionSearchField.getText() : null;
+
+        String normExt = null;
+        if (extFilter != null) {
+            normExt = extFilter.trim();
+            if (normExt.startsWith(".")) normExt = normExt.substring(1);
+            if (normExt.isEmpty()) normExt = null;
+        }
+
+        String sql =
+                "SELECT d.DOCUMENT_ID, d.FILE_NAME, d.FILE_EXTENSION, u.NAME, u.SURNAME\n" +
+                "FROM DOCUMENT d JOIN \"User\" u ON u.USER_ID = d.USER_ID\n" +
+                "WHERE ( ? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ? OR UPPER(u.SURNAME) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR ? = '' OR UPPER(d.FILE_EXTENSION) LIKE ? )\n" +
+                "ORDER BY d.DOCUMENT_ID DESC";
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String userLike = (userFilter == null || userFilter.isEmpty()) ? null : (userFilter.trim().toUpperCase() + "%");
+            String extLike  = (normExt == null) ? null : (normExt.toUpperCase() + "%");
+
+            ps.setString(1, userFilter);
+            ps.setString(2, userFilter);
+            ps.setString(3, userLike);
+            ps.setString(4, userLike);
+            ps.setString(5, normExt);
+            ps.setString(6, normExt);
+            ps.setString(7, extLike);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new DocumentRow(
+                            rs.getInt(1), rs.getString(2), rs.getString(3),
+                            rs.getString(4) + " " + rs.getString(5)
+                    ));
+                }
+            }
+        } catch (SQLException e){ showError("Error loading documents: " + e.getMessage()); }
         documentsTable.setItems(rows);
     }
+
+    // --- Add actions placeholders for newly added buttons ---
+    @FXML private void onAddLogin(){ showError("Add Login not implemented yet."); }
+    @FXML private void onAddAudit(){ showError("Add Audit not implemented yet."); }
+    @FXML private void onAddDocument(){ showError("Add Document not implemented yet."); }
 
     private void deleteDocument(SimpleIntegerProperty id){
         try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM DOCUMENT WHERE DOCUMENT_ID=?")){
@@ -2083,23 +2230,149 @@ public class AdminViewController {
     }
 
     @FXML private void onAddTransaction(){
-        Dialog<TransactionEditResult> dlg = new Dialog<>(); dlg.setTitle("Add Transaction");
-        ComboBox<String> typeBox = new ComboBox<>(loadTransactionTypeNames()); typeBox.getSelectionModel().selectFirst();
-        TextField amountF = new TextField(); ComboBox<AccountOption> fromBox = new ComboBox<>(loadAccounts()); ComboBox<AccountOption> toBox = new ComboBox<>(loadAccounts());
-        GridPane grid=new GridPane(); grid.setHgap(8); grid.setVgap(8);
-        grid.addRow(0,new Label("Type:"), typeBox); grid.addRow(1,new Label("Amount:"), amountF); grid.addRow(2,new Label("From Account:"), fromBox); grid.addRow(3,new Label("To Account:"), toBox);
-        dlg.getDialogPane().setContent(grid); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dlg.setResultConverter(b-> b==ButtonType.OK? new TransactionEditResult(typeBox.getValue(), amountF.getText(), fromBox.getValue(), toBox.getValue()) : null);
-        TransactionEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
+        Dialog<TransactionEditResult> dlg = new Dialog<>();
+        dlg.setTitle("Add Transaction");
+
+        // Typ transakce je vždy dostupný pro admina lokálně (nezávisle na číselníku)
+        ComboBox<String> typeBox = new ComboBox<>(FXCollections.observableArrayList("TRANSFER", "WITHDRAW", "DEPOSIT"));
+        typeBox.getSelectionModel().selectFirst();
+
+        TextField amountF = new TextField();
+        ComboBox<AccountOption> fromBox = new ComboBox<>(loadAccounts());
+        ComboBox<AccountOption> toBox = new ComboBox<>(loadAccounts());
+
+        // Additional fields requested: messages and time
+        TextField msgSenderF = new TextField();
+        msgSenderF.setPromptText("Message for Sender (optional)");
+        TextField msgRecipientF = new TextField();
+        msgRecipientF.setPromptText("Message for Recipient (optional)");
+
+        DatePicker datePicker = new DatePicker();
+        datePicker.setPromptText("Date (optional)");
+        TextField timeField = new TextField();
+        timeField.setPromptText("Time HH:mm (optional)");
+
+        // Dynamické povolení/zakázání polí podle typu
+        typeBox.valueProperty().addListener((obs, oldV, newV) -> {
+            boolean isWithdraw = "WITHDRAW".equalsIgnoreCase(newV);
+            boolean isDeposit  = "DEPOSIT".equalsIgnoreCase(newV);
+            // WITHDRAW: zakázat To (prázdné) ; DEPOSIT: zakázat From (prázdné)
+            toBox.setDisable(isWithdraw);
+            if (isWithdraw) { toBox.getSelectionModel().clearSelection(); }
+            fromBox.setDisable(isDeposit);
+            if (isDeposit) { fromBox.getSelectionModel().clearSelection(); }
+        });
+        // Inicializace stavu podle defaultního typu
+        typeBox.getSelectionModel().select("TRANSFER");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(8); grid.setVgap(8);
+        grid.addRow(0, new Label("Type:"), typeBox);
+        grid.addRow(1, new Label("Amount:"), amountF);
+        grid.addRow(2, new Label("From Account:"), fromBox);
+        grid.addRow(3, new Label("To Account:"), toBox);
+        grid.addRow(4, new Label("Message (Sender):"), msgSenderF);
+        grid.addRow(5, new Label("Message (Recipient):"), msgRecipientF);
+        grid.addRow(6, new Label("Transaction time:"), new HBox(6, datePicker, timeField));
+
+        dlg.getDialogPane().setContent(grid);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dlg.setResultConverter(b -> {
+            if (b != ButtonType.OK) return null;
+            String t = typeBox.getValue();
+            String amt = amountF.getText();
+            AccountOption from = fromBox.isDisabled() ? null : fromBox.getValue();
+            AccountOption to   = toBox.isDisabled()   ? null : toBox.getValue();
+            // We will pass messages/time via outer scope variables (captured below)
+            return new TransactionEditResult(t, amt, from, to);
+        });
+
+        TransactionEditResult res = dlg.showAndWait().orElse(null);
+        if (res == null) return;
+
+        // Validace dle typu
+        if (res.amount == null || res.amount.trim().isEmpty()) { showError("Amount is required."); return; }
+        java.math.BigDecimal amtBd;
+        try {
+            amtBd = new java.math.BigDecimal(res.amount.trim());
+            if (amtBd.compareTo(java.math.BigDecimal.ZERO) <= 0) { showError("Amount must be positive."); return; }
+        } catch (NumberFormatException ex) { showError("Invalid amount format."); return; }
+
+        boolean isTransfer = "TRANSFER".equalsIgnoreCase(res.typeName);
+        boolean isWithdraw = "WITHDRAW".equalsIgnoreCase(res.typeName);
+        boolean isDeposit  = "DEPOSIT".equalsIgnoreCase(res.typeName);
+
+        if (isTransfer) {
+            if (res.fromAcc == null || res.toAcc == null) { showError("Both From and To accounts are required for TRANSFER."); return; }
+            if (res.fromAcc.accountId == res.toAcc.accountId) { showError("From and To accounts cannot be the same."); return; }
+        } else if (isWithdraw) {
+            if (res.fromAcc == null) { showError("From account is required for WITHDRAW."); return; }
+        } else if (isDeposit) {
+            if (res.toAcc == null) { showError("To account is required for DEPOSIT."); return; }
+        }
+
         try (Connection conn = ConnectionSingleton.getInstance().getConnection()){
-            int typeId = findTransactionTypeId(res.typeName);
-            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO TRANSACTION(TRANSACTION_ID, TRANSFER_AMOUNT, TRANSACTION_TYPE_ID, TRANSACTION_TIME, ACCOUNT_FROM_ID, ACCOUNT_TO_ID) VALUES(TRANSACTION_SEQ.NEXTVAL, ?, ?, SYSDATE, ?, ?)")){
-                ps.setBigDecimal(1, new java.math.BigDecimal(res.amount)); ps.setInt(2, typeId);
-                if (res.fromAcc==null) ps.setNull(3, java.sql.Types.INTEGER); else ps.setInt(3, res.fromAcc.accountId);
-                if (res.toAcc==null) ps.setNull(4, java.sql.Types.INTEGER); else ps.setInt(4, res.toAcc.accountId);
+            // Získat ID typu z číselníku, pokud existuje; jinak fallback na TRANSFER
+            Integer typeId = null;
+            try {
+                typeId = findTransactionTypeId(res.typeName);
+            } catch (SQLException ignore) {
+                try { typeId = findTransactionTypeId("TRANSFER"); } catch (SQLException ignore2) { /* ponecháme null */ }
+            }
+
+            if (typeId == null) {
+                showError("Transaction type not configured (expected at least TRANSFER).");
+                return;
+            }
+
+            // Build transaction time from user input if provided, else NOW
+            java.sql.Timestamp whenTs;
+            java.time.LocalDate d = datePicker.getValue();
+            String timeStr = timeField.getText();
+            if (d != null) {
+                int hh = 0, mm = 0;
+                if (timeStr != null && !timeStr.trim().isEmpty()) {
+                    try {
+                        String[] p = timeStr.trim().split(":");
+                        if (p.length >= 1) hh = Integer.parseInt(p[0]);
+                        if (p.length >= 2) mm = Integer.parseInt(p[1]);
+                        if (hh < 0 || hh > 23 || mm < 0 || mm > 59) throw new NumberFormatException();
+                    } catch (NumberFormatException ex) {
+                        showError("Invalid time format. Use HH:mm.");
+                        return;
+                    }
+                }
+                whenTs = java.sql.Timestamp.valueOf(java.time.LocalDateTime.of(d, java.time.LocalTime.of(hh, mm)));
+            } else {
+                whenTs = new java.sql.Timestamp(System.currentTimeMillis());
+            }
+
+            String msgSender = (msgSenderF.getText() == null) ? null : msgSenderF.getText().trim();
+            String msgRecipient = (msgRecipientF.getText() == null) ? null : msgRecipientF.getText().trim();
+
+            String sql = "INSERT INTO TRANSACTION(TRANSACTION_ID, TRANSFER_AMOUNT, MESSAGE_FOR_SENDER, MESSAGE_FOR_RECIPIENT, TRANSACTION_TYPE_ID, TRANSACTION_TIME, ACCOUNT_FROM_ID, ACCOUNT_TO_ID) " +
+                         "VALUES(TRANSACTION_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(sql)){
+                ps.setBigDecimal(1, amtBd);
+                // messages (nullable)
+                if (msgSender == null || msgSender.isEmpty()) ps.setNull(2, java.sql.Types.VARCHAR); else ps.setString(2, msgSender);
+                if (msgRecipient == null || msgRecipient.isEmpty()) ps.setNull(3, java.sql.Types.VARCHAR); else ps.setString(3, msgRecipient);
+                // type id (NOT NULL)
+                ps.setInt(4, typeId);
+                // time
+                ps.setTimestamp(5, whenTs);
+                // from
+                if (isDeposit || res.fromAcc == null) ps.setNull(6, java.sql.Types.INTEGER); else ps.setInt(6, res.fromAcc.accountId);
+                // to
+                if (isWithdraw || res.toAcc == null) ps.setNull(7, java.sql.Types.INTEGER); else ps.setInt(7, res.toAcc.accountId);
+
                 ps.executeUpdate();
             }
-        } catch (SQLException e){ showError("Error adding transaction: "+e.getMessage()); }
+        } catch (SQLException e){
+            showError("Error adding transaction: " + e.getMessage());
+            return;
+        }
         reloadTransactions();
     }
 

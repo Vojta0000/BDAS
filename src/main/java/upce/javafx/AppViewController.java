@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.net.InetAddress;
 
 /**
  * Root controller that combines a simple login screen with both Client and Teller views.
@@ -138,6 +139,8 @@ public class AppViewController {
                     // Route to Admin view; keep isTeller false for legacy flag
                     isTeller = false;
                     HelloApplication.userId = rs.getInt("USER_ID");
+                    // Log successful login (Admin)
+                    logLogin(HelloApplication.userId);
                     // Show admin view and initialize
                     loginErrorLabel.setVisible(false);
                     loginErrorLabel.setManaged(false);
@@ -157,6 +160,9 @@ public class AppViewController {
 
         loginErrorLabel.setVisible(false);
         loginErrorLabel.setManaged(false);
+
+        // Log successful login (Client/Teller)
+        logLogin(HelloApplication.userId);
 
         if (isTeller) {
             // Show teller view
@@ -528,6 +534,31 @@ public class AppViewController {
         setVisibleManaged(tellerView, toShow == tellerView);
         // admin
         setVisibleManaged(adminView, toShow == adminView);
+    }
+
+    // --- Login logging helpers ---
+    private void logLogin(int userId) {
+        if (userId <= 0) return;
+        String ip = getLocalIpAddress();
+        String sql = "INSERT INTO LOGIN_RECORD (LOGIN_ID, LOGIN_IP_ADDRESS, USER_ID, LOGIN_TIME) " +
+                     "VALUES (LOGIN_SEQ.NEXTVAL, ?, ?, SYSDATE)";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, ip);
+            ps.setInt(2, userId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            // Nezastavovat přihlášení kvůli logování – jen zaznamenat do konzole
+            System.out.println("[LoginLog] Failed to insert login record: " + e.getMessage());
+        }
+    }
+
+    private String getLocalIpAddress() {
+        try {
+            return InetAddress.getLocalHost().getHostAddress();
+        } catch (Exception e) {
+            return "127.0.0.1";
+        }
     }
 
     private void setVisibleManaged(Node node, boolean value) {

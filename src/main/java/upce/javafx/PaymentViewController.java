@@ -5,11 +5,13 @@ import javafx.scene.control.*;
 import javafx.stage.Stage;
 
 import java.math.BigDecimal; // Import BigDecimal
+import javafx.collections.FXCollections;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 
 public class PaymentViewController {
 
@@ -29,6 +31,11 @@ public class PaymentViewController {
     public void initialize() {
         cancelButton.setOnAction(e -> closeWindow());
         confirmButton.setOnAction(e -> processPayment());
+        // Klientský dialog podporuje pouze běžný převod TRANSFER
+        // Zajistit, že pole příjemce je aktivní
+        toAccountField.setDisable(false);
+        errorLabel.setVisible(false);
+        errorLabel.setManaged(false);
     }
 
     public void setFromAccount(int accountId, String accountNumber) {
@@ -47,9 +54,15 @@ public class PaymentViewController {
         String msgRecipient = messageToField.getText() == null ? " " : messageToField.getText();
         String msgSender = messageFromField.getText() == null ? " " : messageFromField.getText();
 
-        if (toAccountNum == null || toAccountNum.trim().isEmpty() ||
-                amountStr == null || amountStr.trim().isEmpty()) {
-            showError("Please fill in 'To Account' and 'Amount'.");
+        // Validation per mode
+        if (amountStr == null || amountStr.trim().isEmpty()) {
+            showError("Please enter Amount.");
+            return;
+        }
+
+        // Klient musí zadat cílový účet
+        if (toAccountNum == null || toAccountNum.trim().isEmpty()) {
+            showError("Please fill in 'To Account'.");
             return;
         }
 
@@ -69,8 +82,9 @@ public class PaymentViewController {
         }
 
         try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
-            // 1. Resolve destination account ID from number
-            int toAccountId = -1;
+            Integer toAccountId = null;
+
+            // Resolve destination account ID from number
             String sqlFindAccount = "SELECT ACCOUNT_ID FROM ACCOUNT WHERE ACCOUNT_NUMBER = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sqlFindAccount)) {
                 pstmt.setString(1, toAccountNum);
@@ -84,29 +98,26 @@ public class PaymentViewController {
                 }
             }
 
-            if (toAccountId == fromAccountId) {
+            if (toAccountId != null && toAccountId == fromAccountId) {
                 showError("Cannot transfer money to the same account.");
                 return;
             }
 
-            // 2. Call the PL/SQL procedure
-            // execute_transfer(p_from_acc_id, p_to_acc_id, p_amount, p_msg_sender, p_msg_recipient)
+            // Call the PL/SQL procedure only with values relevant per mode
             String sqlCall = "{call execute_transfer(?, ?, ?, ?, ?)}";
             try (CallableStatement cstmt = conn.prepareCall(sqlCall)) {
+                // Klient: standardní převod z vybraného účtu na cílový účet
                 cstmt.setInt(1, fromAccountId);
                 cstmt.setInt(2, toAccountId);
-                
-                // Set BigDecimal parameter
+
                 cstmt.setBigDecimal(3, amount);
-                
                 cstmt.setString(4, msgSender);
                 cstmt.setString(5, msgRecipient);
-                
                 cstmt.execute();
             }
 
             // Success
-            System.out.println("Transfer successful.");
+            System.out.println("Transaction successful (TRANSFER).");
             
             // Trigger callback to refresh parent UI
             if (onPaymentSuccess != null) {

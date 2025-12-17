@@ -134,6 +134,16 @@
             </VBox>
 
             <VBox fx:id="loginsSection" spacing="8" visible="false" managed="false">
+                <!-- Row 1: filters for Logins (by user, IP address, time range) -->
+                <HBox spacing="8">
+                    <TextField fx:id="loginUserSearchField" promptText="User name/surname (prefix)" />
+                    <TextField fx:id="loginIpSearchField" promptText="IP address (prefix)" />
+                    <DatePicker fx:id="loginDateFromPicker" promptText="Date from" />
+                    <DatePicker fx:id="loginDateToPicker" promptText="Date to" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button fx:id="reloadLoginsButton" text="Search" onAction="#reloadLogins" />
+                    <Button fx:id="addLoginButton" text="Add" onAction="#onAddLogin" />
+                </HBox>
                 <TableView fx:id="loginsTable" VBox.vgrow="ALWAYS"/>
             </VBox>
 
@@ -154,6 +164,16 @@
             </VBox>
 
             <VBox fx:id="auditsSection" spacing="8" visible="false" managed="false">
+                <!-- Row 1: filters for Audit logs (by user, change text, time range) -->
+                <HBox spacing="8">
+                    <TextField fx:id="auditUserSearchField" promptText="User name/surname (prefix)" />
+                    <TextField fx:id="auditChangeSearchField" promptText="Change contains" />
+                    <DatePicker fx:id="auditDateFromPicker" promptText="Date from" />
+                    <DatePicker fx:id="auditDateToPicker" promptText="Date to" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button fx:id="reloadAuditsButton" text="Search" onAction="#reloadAudits" />
+                    <Button fx:id="addAuditButton" text="Add" onAction="#onAddAudit" />
+                </HBox>
                 <TableView fx:id="auditsTable" VBox.vgrow="ALWAYS"/>
             </VBox>
 
@@ -183,6 +203,14 @@
 
             <!-- Documents section (read-only metadata + delete) -->
             <VBox fx:id="documentsSection" spacing="8" visible="false" managed="false">
+                <!-- Row 1: filters for Documents (by user, by extension) -->
+                <HBox spacing="8">
+                    <TextField fx:id="documentUserSearchField" promptText="User name/surname (prefix)" />
+                    <TextField fx:id="documentExtensionSearchField" promptText="Extension (e.g., .pdf)" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button fx:id="reloadDocumentsButton" text="Search" onAction="#reloadDocuments" />
+                    <Button fx:id="addDocumentButton" text="Add" onAction="#onAddDocument" />
+                </HBox>
                 <TableView fx:id="documentsTable" VBox.vgrow="ALWAYS"/>
             </VBox>
         </StackPane>

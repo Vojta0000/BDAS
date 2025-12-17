@@ -100,6 +100,7 @@ public class TellerViewController {
     @FXML private VBox clientAccountsContainer;
     @FXML private Button openClientChatButton;
     @FXML private Button openClientDocsButton;
+    @FXML private Button createAccountButton;
 
     // If present in FXML as examples
     @FXML private Button sampleAccountBtn1;
@@ -173,6 +174,20 @@ public class TellerViewController {
         openClientChatButton.setOnAction(e -> openClientChat());
         if (openClientDocsButton != null) {
             openClientDocsButton.setOnAction(e -> openClientDocs());
+        }
+        if (createAccountButton != null) {
+            createAccountButton.setOnAction(e -> {
+                if (currentClientId == null || currentClientId.isEmpty()) {
+                    showAlert("Error", "Please select a client first.");
+                    return;
+                }
+                try {
+                    int clientId = Integer.parseInt(currentClientId);
+                    addNewAccountForClient(clientId);
+                } catch (NumberFormatException ex) {
+                    showAlert("Error", "Invalid current client context.");
+                }
+            });
         }
 
         // Account detail actions
