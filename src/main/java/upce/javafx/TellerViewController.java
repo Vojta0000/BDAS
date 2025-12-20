@@ -36,12 +36,20 @@ import java.util.Random;
 public class TellerViewController {
     public Button registerNewUserButton;
     // Sidebar buttons
-    @FXML private Button profileButton;
-    @FXML private Button clientsButton;
-    @FXML private VBox clientsSubMenu;
-    @FXML private Button notificationsButton;
-    @FXML private Button logoutButton;
-    @FXML private Button stopEmulateButton;
+    @FXML
+    private Button profileButton;
+    @FXML
+    private Button clientsButton;
+    @FXML
+    private Button clientsOverviewButton;
+    @FXML
+    private VBox clientsSubMenu;
+    @FXML
+    private Button notificationsButton;
+    @FXML
+    private Button logoutButton;
+    @FXML
+    private Button stopEmulateButton;
 
     // Reference to the main controller to trigger screen switching
     private AppViewController appViewController;
@@ -65,74 +73,137 @@ public class TellerViewController {
     }
 
     // Sections
-    @FXML private VBox profileSection;
-    @FXML private VBox clientDetailSection;
-    @FXML private VBox accountDetailSection;
-    @FXML private VBox clientChatSection;
-    @FXML private VBox notificationsSection;
-    @FXML private VBox registerClientSection;
-    @FXML private VBox clientDocumentsSection;
+    @FXML
+    private VBox profileSection;
+    @FXML
+    private VBox clientsOverviewSection;
+    @FXML
+    private VBox clientDetailSection;
+    @FXML
+    private VBox accountDetailSection;
+    @FXML
+    private VBox clientChatSection;
+    @FXML
+    private VBox notificationsSection;
+    @FXML
+    private VBox registerClientSection;
+    @FXML
+    private VBox clientDocumentsSection;
+
+    @FXML
+    private TableView<ClientOverviewRow> clientsOverviewTable;
+    @FXML
+    private TableColumn<ClientOverviewRow, String> overviewNameCol;
+    @FXML
+    private TableColumn<ClientOverviewRow, String> overviewAccountCol;
+    @FXML
+    private TableColumn<ClientOverviewRow, String> overviewTotalCol;
 
     // Registration fields
-    @FXML private TextField regNameField;
-    @FXML private TextField regSurnameField;
-    @FXML private TextField regBirthNumberField;
-    @FXML private TextField regPhoneField;
-    @FXML private TextField regEmailField;
-    @FXML private PasswordField regPasswordField;
-    @FXML private TextField regStreetField;
-    @FXML private TextField regHouseNumberField;
-    @FXML private TextField regCityField;
-    @FXML private TextField regZipField;
-    @FXML private TextField regCountryField;
-    @FXML private Button confirmRegistrationButton;
+    @FXML
+    private TextField regNameField;
+    @FXML
+    private TextField regSurnameField;
+    @FXML
+    private TextField regBirthNumberField;
+    @FXML
+    private TextField regPhoneField;
+    @FXML
+    private TextField regEmailField;
+    @FXML
+    private PasswordField regPasswordField;
+    @FXML
+    private TextField regStreetField;
+    @FXML
+    private TextField regHouseNumberField;
+    @FXML
+    private TextField regCityField;
+    @FXML
+    private TextField regZipField;
+    @FXML
+    private TextField regCountryField;
+    @FXML
+    private Button confirmRegistrationButton;
 
     // Profile fields
-    @FXML private TextField nameField;
-    @FXML private TextField surnameField;
-    @FXML private TextField phoneField;
-    @FXML private TextField emailField;
+    @FXML
+    private TextField nameField;
+    @FXML
+    private TextField surnameField;
+    @FXML
+    private TextField phoneField;
+    @FXML
+    private TextField emailField;
 
     // Client details
-    @FXML private Label clientHeader;
-    @FXML private Label clientNameLabel;
-    @FXML private Label clientIdLabel;
-    @FXML private VBox clientAccountsContainer;
-    @FXML private Button openClientChatButton;
-    @FXML private Button openClientDocsButton;
-    @FXML private Button createAccountButton;
+    @FXML
+    private Label clientHeader;
+    @FXML
+    private Label clientNameLabel;
+    @FXML
+    private Label clientIdLabel;
+    @FXML
+    private VBox clientAccountsContainer;
+    @FXML
+    private Button openClientChatButton;
+    @FXML
+    private Button openClientDocsButton;
+    @FXML
+    private Button createAccountButton;
 
     // If present in FXML as examples
-    @FXML private Button sampleAccountBtn1;
-    @FXML private Button sampleAccountBtn2;
+    @FXML
+    private Button sampleAccountBtn1;
+    @FXML
+    private Button sampleAccountBtn2;
 
     // Account details
-    @FXML private Label accountHeader;
-    @FXML private Label accountNumberLabel;
-    @FXML private Label accountBalanceLabel;
-    @FXML private Label accountCurrencyLabel;
-    @FXML private TableView<TransactionRow> transactionsTable;
-    @FXML private TableColumn<TransactionRow, String> dateColumn;
-    @FXML private TableColumn<TransactionRow, String> descriptionColumn;
-    @FXML private TableColumn<TransactionRow, String> amountColumn;
-    @FXML private Button backToClientButton;
-    @FXML private Button historyButton;
+    @FXML
+    private Label accountHeader;
+    @FXML
+    private Label accountNumberLabel;
+    @FXML
+    private Label accountBalanceLabel;
+    @FXML
+    private Label accountCurrencyLabel;
+    @FXML
+    private TableView<TransactionRow> transactionsTable;
+    @FXML
+    private TableColumn<TransactionRow, String> dateColumn;
+    @FXML
+    private TableColumn<TransactionRow, String> descriptionColumn;
+    @FXML
+    private TableColumn<TransactionRow, String> amountColumn;
+    @FXML
+    private Button backToClientButton;
+    @FXML
+    private Button historyButton;
 
     // Documents
-    @FXML private Label clientDocsHeader;
-    @FXML private StackPane fileDropArea;
-    @FXML private ListView<HBox> documentsListView;
-    @FXML private Button backToClientFromDocsButton;
+    @FXML
+    private Label clientDocsHeader;
+    @FXML
+    private StackPane fileDropArea;
+    @FXML
+    private ListView<HBox> documentsListView;
+    @FXML
+    private Button backToClientFromDocsButton;
 
     // Client chat
-    @FXML private Label clientChatHeader;
-    @FXML private VBox clientChatMessagesContainer;
-    @FXML private TextField clientMessageInput;
-    @FXML private Button sendClientMessageButton;
-    @FXML private Button backToClientFromChatButton;
+    @FXML
+    private Label clientChatHeader;
+    @FXML
+    private VBox clientChatMessagesContainer;
+    @FXML
+    private TextField clientMessageInput;
+    @FXML
+    private Button sendClientMessageButton;
+    @FXML
+    private Button backToClientFromChatButton;
 
     // Notifications (read-only feed container)
-    @FXML private VBox notificationsMessagesContainer;
+    @FXML
+    private VBox notificationsMessagesContainer;
 
     // State
     private String currentClientName;
@@ -140,10 +211,13 @@ public class TellerViewController {
     private String currentAccountNumber;
     private int currentAccountIdForHistory;
 
+    private boolean showSent = false;
+
     @FXML
     public void initialize() {
         // Sidebar navigation
         profileButton.setOnAction(e -> showSection("profile"));
+        clientsOverviewButton.setOnAction(e -> showSection("overview"));
         notificationsButton.setOnAction(e -> showSection("notifications"));
 
         if (logoutButton != null) {
@@ -216,6 +290,7 @@ public class TellerViewController {
 
         // Table columns setup
         setupTransactionTable();
+        setupOverviewTable();
 
 //        // Client detail actions
 //        openClientChatButton.setOnAction(e -> openClientChat());
@@ -240,6 +315,78 @@ public class TellerViewController {
 
         // Optionally populate static profile demo data (can be replaced by real data wiring)
 //        setProfileDemoData();
+    }
+
+    private void setupOverviewTable() {
+        overviewNameCol.setCellValueFactory(d -> d.getValue().name);
+        overviewAccountCol.setCellValueFactory(d -> d.getValue().accountNumber);
+        overviewTotalCol.setCellValueFactory(d -> d.getValue().totalAmount);
+
+        // Create a button to serve as the clickable header
+        Button toggleBtn = new Button("Total Received");
+        toggleBtn.setStyle("-fx-background-color: transparent; -fx-font-weight: bold; -fx-cursor: hand;");
+
+        // Remove the default text to avoid "Total Received" appearing twice
+        overviewTotalCol.setText("");
+        overviewTotalCol.setGraphic(toggleBtn);
+
+        toggleBtn.setOnAction(e -> {
+            showSent = !showSent;
+            toggleBtn.setText(showSent ? "Total Sent" : "Total Received");
+            loadClientsOverview();
+        });
+    }
+
+    private void loadClientsOverview() {
+        clientsOverviewTable.getItems().clear();
+        int tellerId = HelloApplication.userId;
+        int sentFlag = showSent ? 1 : 0;
+
+        String sql = """
+                SELECT u.NAME, u.SURNAME, a.ACCOUNT_NUMBER, a.ACCOUNT_ID
+                FROM Client c
+                JOIN "User" u ON c.USER_ID = u.USER_ID
+                JOIN Account a ON a.CLIENT_ID = c.USER_ID
+                WHERE c.TELLER_ID = ? AND u.APPROVED = 'Y'
+                """;
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tellerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String name = rs.getString("NAME") + " " + rs.getString("SURNAME");
+                    String accNum = rs.getString("ACCOUNT_NUMBER");
+                    int accId = rs.getInt("ACCOUNT_ID");
+
+                    // Call your PL/SQL function
+                    double total = 0;
+                    try (PreparedStatement fPs = conn.prepareStatement("SELECT total_amount(?, ?) FROM DUAL")) {
+                        fPs.setInt(1, accId);
+                        fPs.setInt(2, sentFlag);
+                        try (ResultSet fRs = fPs.executeQuery()) {
+                            if (fRs.next()) total = fRs.getDouble(1);
+                        }
+                    }
+
+                    clientsOverviewTable.getItems().add(new ClientOverviewRow(name, accNum, total + " CZK"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static class ClientOverviewRow {
+        public final javafx.beans.property.SimpleStringProperty name;
+        public final javafx.beans.property.SimpleStringProperty accountNumber;
+        public final javafx.beans.property.SimpleStringProperty totalAmount;
+
+        public ClientOverviewRow(String n, String acc, String total) {
+            this.name = new javafx.beans.property.SimpleStringProperty(n);
+            this.accountNumber = new javafx.beans.property.SimpleStringProperty(acc);
+            this.totalAmount = new javafx.beans.property.SimpleStringProperty(total);
+        }
     }
 
     private void openClientChat() {
@@ -330,14 +477,16 @@ public class TellerViewController {
         int tellerId = HelloApplication.userId;
 
         try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
-            // Assuming FUNCTION get_teller_clients returns a cursor, but JDBC handling of REF CURSOR
-            // can be tricky depending on driver. Standard Select is safer if we have direct access.
-            // Based on PL/SQL: SELECT u.User_id, u.Name, u.Surname, c.Email_address, c.Phone_number ...
-            String sql = "SELECT u.User_id, u.Name, u.Surname FROM Client c JOIN \"User\" u ON c.User_id = u.User_id WHERE c.Teller_id = ? AND u.APPROVED = 'Y'";
+            // Using the PL/SQL function get_teller_clients which returns a SYS_REFCURSOR
+            String sql = "{ ? = call get_teller_clients(?) }";
 
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setInt(1, tellerId);
-                try (ResultSet rs = pstmt.executeQuery()) {
+            try (CallableStatement cstmt = conn.prepareCall(sql)) {
+                // Register the out parameter as a Cursor
+                cstmt.registerOutParameter(1, java.sql.Types.REF_CURSOR);
+                cstmt.setInt(2, tellerId);
+                cstmt.execute();
+
+                try (ResultSet rs = (ResultSet) cstmt.getObject(1)) {
                     while (rs.next()) {
                         int clientId = rs.getInt("User_id");
                         String name = rs.getString("Name") + " " + rs.getString("Surname");
@@ -354,6 +503,7 @@ public class TellerViewController {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+            showAlert("Error", "Failed to load clients using database function: " + e.getMessage());
         }
     }
 
@@ -370,7 +520,7 @@ public class TellerViewController {
         showSection("client");
     }
 
-    // --- Account History Logic ---
+// --- Account History Logic ---
 
     private void populateClientAccounts(int clientId) {
         clientAccountsContainer.getChildren().clear();
@@ -454,18 +604,18 @@ public class TellerViewController {
                 List<ClientViewController.TransactionHistoryRow> rows = new ArrayList<>();
                 // Reusing query logic from ClientViewController
                 String sql = """
-                    SELECT t.Transaction_time, tt.Transaction_type_name, t.Transfer_amount,
-                        CASE WHEN t.Account_from_id = a.Account_id THEN COALESCE(act_to.Account_number, 'External/Bank') ELSE COALESCE(act_from.Account_number, 'External/Bank') END as counterparty_account,
-                        CASE WHEN t.Account_from_id = a.Account_id THEN 'Outgoing' ELSE 'Incoming' END as direction,
-                        CASE WHEN t.Account_from_id = a.Account_id THEN -t.Transfer_amount ELSE t.Transfer_amount END as signed_amount
-                    FROM Account a
-                    JOIN Transaction t ON t.Account_from_id = a.Account_id OR t.Account_to_id = a.Account_id
-                    JOIN Transaction_type tt ON t.Transaction_type_id = tt.Transaction_type_id
-                    LEFT JOIN Account act_to ON t.Account_to_id = act_to.Account_id
-                    LEFT JOIN Account act_from ON t.Account_from_id = act_from.Account_id
-                    WHERE a.Account_id = ?
-                    ORDER BY t.Transaction_time DESC
-                """;
+                            SELECT t.Transaction_time, tt.Transaction_type_name, t.Transfer_amount,
+                                CASE WHEN t.Account_from_id = a.Account_id THEN COALESCE(act_to.Account_number, 'External/Bank') ELSE COALESCE(act_from.Account_number, 'External/Bank') END as counterparty_account,
+                                CASE WHEN t.Account_from_id = a.Account_id THEN 'Outgoing' ELSE 'Incoming' END as direction,
+                                CASE WHEN t.Account_from_id = a.Account_id THEN -t.Transfer_amount ELSE t.Transfer_amount END as signed_amount
+                            FROM Account a
+                            JOIN Transaction t ON t.Account_from_id = a.Account_id OR t.Account_to_id = a.Account_id
+                            JOIN Transaction_type tt ON t.Transaction_type_id = tt.Transaction_type_id
+                            LEFT JOIN Account act_to ON t.Account_to_id = act_to.Account_id
+                            LEFT JOIN Account act_from ON t.Account_from_id = act_from.Account_id
+                            WHERE a.Account_id = ?
+                            ORDER BY t.Transaction_time DESC
+                        """;
 
                 try (Connection conn = ConnectionSingleton.getInstance().getConnection();
                      PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -521,33 +671,56 @@ public class TellerViewController {
 
     public void showSection(String section) {
         // Hide all
-        profileSection.setVisible(false); profileSection.setManaged(false);
-        clientDetailSection.setVisible(false); clientDetailSection.setManaged(false);
-        accountDetailSection.setVisible(false); accountDetailSection.setManaged(false);
-        clientChatSection.setVisible(false); clientChatSection.setManaged(false);
-        notificationsSection.setVisible(false); notificationsSection.setManaged(false);
+        profileSection.setVisible(false);
+        profileSection.setManaged(false);
+        clientDetailSection.setVisible(false);
+        clientDetailSection.setManaged(false);
+        accountDetailSection.setVisible(false);
+        accountDetailSection.setManaged(false);
+        clientChatSection.setVisible(false);
+        clientChatSection.setManaged(false);
+        notificationsSection.setVisible(false);
+        notificationsSection.setManaged(false);
+        profileSection.setVisible(false);
+        profileSection.setManaged(false);
+        if (clientsOverviewSection != null) {
+            clientsOverviewSection.setVisible(false);
+            clientsOverviewSection.setManaged(false);
+        }
         if (registerClientSection != null) {
-            registerClientSection.setVisible(false); registerClientSection.setManaged(false);
+            registerClientSection.setVisible(false);
+            registerClientSection.setManaged(false);
         }
         if (clientDocumentsSection != null) {
-            clientDocumentsSection.setVisible(false); clientDocumentsSection.setManaged(false);
+            clientDocumentsSection.setVisible(false);
+            clientDocumentsSection.setManaged(false);
         }
         if (pendingRequestsSection != null) {
-            pendingRequestsSection.setVisible(false); pendingRequestsSection.setManaged(false);
+            pendingRequestsSection.setVisible(false);
+            pendingRequestsSection.setManaged(false);
         }
 
         switch (section) {
             case "profile":
-                profileSection.setVisible(true); profileSection.setManaged(true);
+                profileSection.setVisible(true);
+                profileSection.setManaged(true);
+                break;
+            case "overview":
+                clientsOverviewSection.setVisible(true);
+                clientsOverviewSection.setManaged(true);
+                loadClientsOverview();
                 break;
             case "client":
-                clientDetailSection.setVisible(true); clientDetailSection.setManaged(true);
+                clientDetailSection.setVisible(true);
+                clientDetailSection.setManaged(true);
                 break;
             case "account":
-                accountDetailSection.setVisible(true); accountDetailSection.setManaged(true);
+                accountDetailSection.setVisible(true);
+                accountDetailSection.setManaged(true);
                 break;
             case "chat":
-                clientChatSection.setVisible(true); clientChatSection.setManaged(true);
+                clientChatSection.setVisible(true);
+                clientChatSection.setManaged(true);
                 break;
             case "documents":
                 if (clientDocumentsSection != null) {
@@ -557,34 +730,42 @@ public class TellerViewController {
                 }
                 break;
             case "notifications":
-                notificationsSection.setVisible(true); notificationsSection.setManaged(true);
+                notificationsSection.setVisible(true);
+                notificationsSection.setManaged(true);
                 loadNotifications();
                 break;
             case "register":
                 if (registerClientSection != null) {
-                    registerClientSection.setVisible(true); registerClientSection.setManaged(true);
+                    registerClientSection.setVisible(true);
+                    registerClientSection.setManaged(true);
                 }
                 break;
             case "pending":
                 if (pendingRequestsSection != null) {
-                    pendingRequestsSection.setVisible(true); pendingRequestsSection.setManaged(true);
+                    pendingRequestsSection.setVisible(true);
+                    pendingRequestsSection.setManaged(true);
                     loadPendingRequests();
                 }
                 break;
             default:
-                profileSection.setVisible(true); profileSection.setManaged(true);
+                profileSection.setVisible(true);
+                profileSection.setManaged(true);
         }
     }
 
     // ----- Pending Requests -----
-    @FXML private Button pendingRequestsButton;
-    @FXML private VBox pendingRequestsSection;
-    @FXML private TableView<PendingRow> pendingTable;
+    @FXML
+    private Button pendingRequestsButton;
+    @FXML
+    private VBox pendingRequestsSection;
+    @FXML
+    private TableView<PendingRow> pendingTable;
 
     @FXML
     public void initializePending() { /* kept for potential FXML hooks; logic moved into initialize() */ }
 
     private boolean pendingColumnsInitialized = false;
+
     private void setupPendingTable() {
         if (pendingTable == null || pendingColumnsInitialized) return;
         TableColumn<PendingRow, String> nameCol = new TableColumn<>("Name");
@@ -611,6 +792,7 @@ public class TellerViewController {
         actionsCol.setCellFactory(col -> new TableCell<>() {
             private final Button approveBtn = new Button("Approve");
             private final Button declineBtn = new Button("Decline");
+
             {
                 approveBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
                 declineBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
@@ -689,7 +871,9 @@ public class TellerViewController {
              PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET APPROVED='Y' WHERE USER_ID = ?")) {
             ps.setInt(1, userId);
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         loadPendingRequests();
         loadMyClients();
     }
@@ -699,7 +883,9 @@ public class TellerViewController {
              PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET APPROVED='R' WHERE USER_ID = ?")) {
             ps.setInt(1, userId);
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         loadPendingRequests();
     }
 
@@ -710,12 +896,18 @@ public class TellerViewController {
         final javafx.beans.property.SimpleStringProperty phone = new javafx.beans.property.SimpleStringProperty();
         final javafx.beans.property.SimpleStringProperty email = new javafx.beans.property.SimpleStringProperty();
         final javafx.beans.property.SimpleStringProperty address = new javafx.beans.property.SimpleStringProperty();
+
         public PendingRow(int id, String n, String b, String p, String e, String a) {
-            userId.set(id); name.set(n); birthNumber.set(b); phone.set(p); email.set(e); address.set(a);
+            userId.set(id);
+            name.set(n);
+            birthNumber.set(b);
+            phone.set(p);
+            email.set(e);
+            address.set(a);
         }
     }
 
-    // --- Documents Logic ---
+// --- Documents Logic ---
 
     private void openClientDocs() {
         if (currentClientId == null) return;
@@ -822,7 +1014,8 @@ public class TellerViewController {
 
                         String extension = "";
                         int i = fileName.lastIndexOf('.');
-                        if (i > 0) extension = fileName.substring(i); else extension = ".dat";
+                        if (i > 0) extension = fileName.substring(i);
+                        else extension = ".dat";
 
                         File tempFile = File.createTempFile("bankis_doc_", extension);
                         tempFile.deleteOnExit();
@@ -1102,8 +1295,11 @@ public class TellerViewController {
         final String number;
         final String balance;
         final String currency;
+
         AccountEntry(String number, String balance, String currency) {
-            this.number = number; this.balance = balance; this.currency = currency;
+            this.number = number;
+            this.balance = balance;
+            this.currency = currency;
         }
     }
 
@@ -1112,13 +1308,23 @@ public class TellerViewController {
         private final javafx.beans.property.SimpleStringProperty date = new javafx.beans.property.SimpleStringProperty();
         private final javafx.beans.property.SimpleStringProperty description = new javafx.beans.property.SimpleStringProperty();
         private final javafx.beans.property.SimpleStringProperty amount = new javafx.beans.property.SimpleStringProperty();
+
         public TransactionRow(String date, String description, String amount) {
             this.date.set(date);
             this.description.set(description);
             this.amount.set(amount);
         }
-        public javafx.beans.property.SimpleStringProperty dateProperty() { return date; }
-        public javafx.beans.property.SimpleStringProperty descriptionProperty() { return description; }
-        public javafx.beans.property.SimpleStringProperty amountProperty() { return amount; }
+
+        public javafx.beans.property.SimpleStringProperty dateProperty() {
+            return date;
+        }
+
+        public javafx.beans.property.SimpleStringProperty descriptionProperty() {
+            return description;
+        }
+
+        public javafx.beans.property.SimpleStringProperty amountProperty() {
+            return amount;
+        }
     }
 }

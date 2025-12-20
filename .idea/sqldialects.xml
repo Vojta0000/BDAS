@@ -2,7 +2,11 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/src/main/SQLScripts/CreateScript.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/src/main/SQLScripts/InsertScript.sql" dialect="Oracle" />
     <file url="file://$PROJECT_DIR$/src/main/SQLScripts/PlSql.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/src/main/SQLScripts/RealInsertScript.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/src/main/SQLScripts/Views.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/src/main/SQLScripts/deleteScript.sql" dialect="Oracle" />
     <file url="file://$PROJECT_DIR$/src/main/SQLScripts/destroyScript.sql" dialect="Oracle" />
     <file url="file://$PROJECT_DIR$/src/main/java/upce/javafx/DbConnection.java" dialect="GenericSQL" />
     <file url="PROJECT" dialect="Oracle" />

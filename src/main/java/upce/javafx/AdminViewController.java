@@ -7,6 +7,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -439,19 +440,63 @@ public class AdminViewController {
     private boolean loginsColumnsInitialized = false;
     private void setupLoginsTable(){
         if (loginsTable == null || loginsColumnsInitialized) return;
-        TableColumn<LoginRow, String> userCol = new TableColumn<>("User"); userCol.setCellValueFactory(d -> d.getValue().userName); userCol.setPrefWidth(240);
-        TableColumn<LoginRow, String> ipCol = new TableColumn<>("IP"); ipCol.setCellValueFactory(d -> d.getValue().ip); ipCol.setPrefWidth(160);
-        TableColumn<LoginRow, String> timeCol = new TableColumn<>("Time"); timeCol.setCellValueFactory(d -> d.getValue().time); timeCol.setPrefWidth(220);
+        TableColumn<LoginRow, String> userCol = new TableColumn<>("User"); userCol.setCellValueFactory(d -> d.getValue().userName); userCol.setPrefWidth(200);
+        TableColumn<LoginRow, String> ipCol = new TableColumn<>("IP"); ipCol.setCellValueFactory(d -> d.getValue().ip); ipCol.setPrefWidth(140);
+        TableColumn<LoginRow, String> timeCol = new TableColumn<>("Time"); timeCol.setCellValueFactory(d -> d.getValue().time); timeCol.setPrefWidth(180);
         TableColumn<LoginRow, String> actionsCol = new TableColumn<>("Actions");
         actionsCol.setCellFactory(col -> new TableCell<>(){
             private final Button editBtn = new Button("Edit");
-            { editBtn.setOnAction(e -> editLogin(getTableView().getItems().get(getIndex())));
-              editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;"); }
-            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn)); }
+            private final Button deleteBtn = new Button("Delete");
+            {
+                editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;");
+                deleteBtn.setStyle("-fx-background-color:#e74c3c;-fx-text-fill:white;");
+                editBtn.setOnAction(e -> editLogin(getTableView().getItems().get(getIndex())));
+                deleteBtn.setOnAction(e -> {
+                    LoginRow row = getTableView().getItems().get(getIndex());
+                    deleteLogin(row.id);
+                });
+            }
+            @Override protected void updateItem(String item, boolean empty){
+                super.updateItem(item, empty);
+                if (empty) setGraphic(null);
+                else setGraphic(new HBox(6, editBtn, deleteBtn));
+            }
         });
-        actionsCol.setPrefWidth(120);
+        actionsCol.setPrefWidth(160);
         loginsTable.getColumns().addAll(userCol, ipCol, timeCol, actionsCol);
         loginsColumnsInitialized = true;
+    }
+
+    @FXML private void onAddLogin(){
+        Dialog<LoginAddResult> dlg = new Dialog<>(); dlg.setTitle("Add Login Record");
+        ComboBox<UserOption> userBox = new ComboBox<>(loadAllUsers());
+        TextField ipF = new TextField("127.0.0.1");
+        TextField timeF = new TextField(new java.sql.Timestamp(System.currentTimeMillis()).toString().substring(0,19));
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("User:"), userBox); g.addRow(1, new Label("IP:"), ipF); g.addRow(2, new Label("Time (yyyy-mm-dd hh:mm:ss):"), timeF);
+        dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt == ButtonType.OK ? new LoginAddResult(userBox.getValue(), ipF.getText(), timeF.getText()) : null);
+
+        LoginAddResult res = dlg.showAndWait().orElse(null);
+        if (res == null || res.user == null) return;
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("INSERT INTO LOGIN_RECORD (LOGIN_ID, LOGIN_IP_ADDRESS, USER_ID, LOGIN_TIME) VALUES (LOGIN_SEQ.NEXTVAL, ?, ?, ?)")){
+            ps.setString(1, res.ip);
+            ps.setInt(2, res.user.userId);
+            ps.setTimestamp(3, java.sql.Timestamp.valueOf(res.time.trim()));
+            ps.executeUpdate();
+        } catch (Exception e){ showError("Error adding login: " + e.getMessage()); }
+        reloadLogins();
+    }
+
+    private void deleteLogin(SimpleIntegerProperty id){
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM LOGIN_RECORD WHERE LOGIN_ID=?")){
+            ps.setInt(1, id.get());
+            ps.executeUpdate();
+        } catch (SQLException e){ showError("Error deleting login: " + e.getMessage()); }
+        reloadLogins();
     }
 
     @FXML
@@ -467,13 +512,13 @@ public class AdminViewController {
                 ? java.sql.Date.valueOf(loginDateToPicker.getValue()) : null;
 
         String sql =
-                "SELECT l.LOGIN_ID, l.LOGIN_IP_ADDRESS, l.LOGIN_TIME, u.NAME, u.SURNAME\n" +
-                "FROM LOGIN_RECORD l JOIN \"User\" u ON u.USER_ID = l.USER_ID\n" +
-                "WHERE ( ? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ? OR UPPER(u.SURNAME) LIKE ? )\n" +
-                "  AND ( ? IS NULL OR ? = '' OR UPPER(l.LOGIN_IP_ADDRESS) LIKE ? )\n" +
-                "  AND ( ? IS NULL OR l.LOGIN_TIME >= ? )\n" +
-                "  AND ( ? IS NULL OR l.LOGIN_TIME <  ? + 1 )\n" +
-                "ORDER BY l.LOGIN_TIME DESC";
+                "SELECT LOGIN_ID, LOGIN_IP_ADDRESS, LOGIN_TIME, USER_NAME, USER_SURNAME\n" +
+                "FROM v_login_overview\n" +
+                "WHERE ( ? IS NULL OR ? = '' OR UPPER(USER_NAME) LIKE ? OR UPPER(USER_SURNAME) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR ? = '' OR UPPER(LOGIN_IP_ADDRESS) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR LOGIN_TIME >= ? )\n" +
+                "  AND ( ? IS NULL OR LOGIN_TIME <  ? + 1 )\n" +
+                "ORDER BY LOGIN_TIME DESC";
 
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -496,10 +541,10 @@ public class AdminViewController {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     rows.add(new LoginRow(
-                            rs.getInt(1),
-                            rs.getString(4) + " " + rs.getString(5),
-                            rs.getString(2),
-                            String.valueOf(rs.getTimestamp(3))
+                            rs.getInt("LOGIN_ID"),
+                            rs.getString("USER_NAME") + " " + rs.getString("USER_SURNAME"),
+                            rs.getString("LOGIN_IP_ADDRESS"),
+                            String.valueOf(rs.getTimestamp("LOGIN_TIME"))
                     ));
                 }
             }
@@ -512,19 +557,63 @@ public class AdminViewController {
     private boolean auditsColumnsInitialized = false;
     private void setupAuditsTable(){
         if (auditsTable == null || auditsColumnsInitialized) return;
-        TableColumn<AuditRow, String> userCol = new TableColumn<>("User"); userCol.setCellValueFactory(d -> d.getValue().userName); userCol.setPrefWidth(220);
-        TableColumn<AuditRow, String> typeCol = new TableColumn<>("Change"); typeCol.setCellValueFactory(d -> d.getValue().changeType); typeCol.setPrefWidth(200);
-        TableColumn<AuditRow, String> timeCol = new TableColumn<>("Time"); timeCol.setCellValueFactory(d -> d.getValue().time); timeCol.setPrefWidth(220);
+        TableColumn<AuditRow, String> userCol = new TableColumn<>("User"); userCol.setCellValueFactory(d -> d.getValue().userName); userCol.setPrefWidth(200);
+        TableColumn<AuditRow, String> typeCol = new TableColumn<>("Change"); typeCol.setCellValueFactory(d -> d.getValue().changeType); typeCol.setPrefWidth(180);
+        TableColumn<AuditRow, String> timeCol = new TableColumn<>("Time"); timeCol.setCellValueFactory(d -> d.getValue().time); timeCol.setPrefWidth(180);
         TableColumn<AuditRow, String> actionsCol = new TableColumn<>("Actions");
         actionsCol.setCellFactory(col -> new TableCell<>(){
             private final Button editBtn = new Button("Edit");
-            { editBtn.setOnAction(e -> editAudit(getTableView().getItems().get(getIndex())));
-              editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;"); }
-            @Override protected void updateItem(String item, boolean empty){ super.updateItem(item, empty); setGraphic(empty? null : new HBox(6, editBtn)); }
+            private final Button deleteBtn = new Button("Delete");
+            {
+                editBtn.setStyle("-fx-background-color:#3498db;-fx-text-fill:white;");
+                deleteBtn.setStyle("-fx-background-color:#e74c3c;-fx-text-fill:white;");
+                editBtn.setOnAction(e -> editAudit(getTableView().getItems().get(getIndex())));
+                deleteBtn.setOnAction(e -> {
+                    AuditRow row = getTableView().getItems().get(getIndex());
+                    deleteAudit(row.id);
+                });
+            }
+            @Override protected void updateItem(String item, boolean empty){
+                super.updateItem(item, empty);
+                if (empty) setGraphic(null);
+                else setGraphic(new HBox(6, editBtn, deleteBtn));
+            }
         });
-        actionsCol.setPrefWidth(120);
+        actionsCol.setPrefWidth(160);
         auditsTable.getColumns().addAll(userCol, typeCol, timeCol, actionsCol);
         auditsColumnsInitialized = true;
+    }
+
+    @FXML private void onAddAudit(){
+        Dialog<AuditAddResult> dlg = new Dialog<>(); dlg.setTitle("Add Audit Log");
+        ComboBox<UserOption> userBox = new ComboBox<>(loadAllUsers());
+        TextField typeF = new TextField();
+        TextField timeF = new TextField(new java.sql.Timestamp(System.currentTimeMillis()).toString().substring(0,19));
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0, new Label("User:"), userBox); g.addRow(1, new Label("Change:"), typeF); g.addRow(2, new Label("Time:"), timeF);
+        dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt == ButtonType.OK ? new AuditAddResult(userBox.getValue(), typeF.getText(), timeF.getText()) : null);
+
+        AuditAddResult res = dlg.showAndWait().orElse(null);
+        if (res == null || res.user == null) return;
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("INSERT INTO AUDIT_LOG (Audit_id, Change_type, Change_time, User_id) VALUES (AUDIT_SEQ.NEXTVAL, ?, ?, ?)")){
+            ps.setString(1, res.type);
+            ps.setTimestamp(2, java.sql.Timestamp.valueOf(res.time.trim()));
+            ps.setInt(3, res.user.userId);
+            ps.executeUpdate();
+        } catch (Exception e){ showError("Error adding audit: " + e.getMessage()); }
+        reloadAudits();
+    }
+
+    private void deleteAudit(SimpleIntegerProperty id){
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM AUDIT_LOG WHERE AUDIT_ID=?")){
+            ps.setInt(1, id.get());
+            ps.executeUpdate();
+        } catch (SQLException e){ showError("Error deleting audit: " + e.getMessage()); }
+        reloadAudits();
     }
 
     @FXML
@@ -540,13 +629,13 @@ public class AdminViewController {
                 ? java.sql.Date.valueOf(auditDateToPicker.getValue()) : null;
 
         String sql =
-                "SELECT a.AUDIT_ID, a.CHANGE_TYPE, a.CHANGE_TIME, u.NAME, u.SURNAME\n" +
-                "FROM AUDIT_LOG a JOIN \"User\" u ON u.USER_ID = a.USER_ID\n" +
-                "WHERE ( ? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ? OR UPPER(u.SURNAME) LIKE ? )\n" +
-                "  AND ( ? IS NULL OR ? = '' OR UPPER(a.CHANGE_TYPE) LIKE ? )\n" +
-                "  AND ( ? IS NULL OR a.CHANGE_TIME >= ? )\n" +
-                "  AND ( ? IS NULL OR a.CHANGE_TIME <  ? + 1 )\n" +
-                "ORDER BY a.CHANGE_TIME DESC";
+                "SELECT AUDIT_ID, CHANGE_TYPE, CHANGE_TIME, USER_NAME, USER_SURNAME\n" +
+                "FROM v_audit_overview\n" +
+                "WHERE ( ? IS NULL OR ? = '' OR UPPER(USER_NAME) LIKE ? OR UPPER(USER_SURNAME) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR ? = '' OR UPPER(CHANGE_TYPE) LIKE ? )\n" +
+                "  AND ( ? IS NULL OR CHANGE_TIME >= ? )\n" +
+                "  AND ( ? IS NULL OR CHANGE_TIME <  ? + 1 )\n" +
+                "ORDER BY CHANGE_TIME DESC";
 
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -569,10 +658,10 @@ public class AdminViewController {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     rows.add(new AuditRow(
-                            rs.getInt(1),
-                            rs.getString(4) + " " + rs.getString(5),
-                            rs.getString(2),
-                            String.valueOf(rs.getTimestamp(3))
+                            rs.getInt("AUDIT_ID"),
+                            rs.getString("USER_NAME") + " " + rs.getString("USER_SURNAME"),
+                            rs.getString("CHANGE_TYPE"),
+                            String.valueOf(rs.getTimestamp("CHANGE_TIME"))
                     ));
                 }
             }
@@ -651,9 +740,45 @@ public class AdminViewController {
     }
 
     // --- Add actions placeholders for newly added buttons ---
-    @FXML private void onAddLogin(){ showError("Add Login not implemented yet."); }
-    @FXML private void onAddAudit(){ showError("Add Audit not implemented yet."); }
-    @FXML private void onAddDocument(){ showError("Add Document not implemented yet."); }
+    @FXML private void onAddDocument(){
+        Dialog<DocumentAddResult> dlg = new Dialog<>();
+        dlg.setTitle("Add Document");
+        ComboBox<UserOption> userBox = new ComboBox<>(loadAllUsers());
+        StackPane dropArea = new StackPane(new Label("Drag file here to upload"));
+        dropArea.setPrefSize(300, 100);
+        dropArea.setStyle("-fx-border-color: gray; -fx-border-style: dashed;");
+
+        final java.io.File[] fileArr = {null};
+        dropArea.setOnDragOver(ev -> { if(ev.getDragboard().hasFiles()) ev.acceptTransferModes(javafx.scene.input.TransferMode.COPY); ev.consume(); });
+        dropArea.setOnDragDropped(ev -> { if(ev.getDragboard().hasFiles()){ fileArr[0] = ev.getDragboard().getFiles().get(0); ((Label)dropArea.getChildren().get(0)).setText(fileArr[0].getName()); } ev.consume(); });
+
+        VBox v = new VBox(10, new Label("Owner:"), userBox, dropArea);
+        dlg.getDialogPane().setContent(v);
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dlg.setResultConverter(bt -> bt == ButtonType.OK ? new DocumentAddResult(userBox.getValue(), fileArr[0]) : null);
+
+        DocumentAddResult res = dlg.showAndWait().orElse(null);
+        if (res != null && res.user != null && res.file != null) {
+            saveAdminDocument(res.file, res.user.userId);
+        }
+        reloadDocuments();
+    }
+
+    private void saveAdminDocument(java.io.File file, int userId) {
+        String name = file.getName();
+        String ext = name.contains(".") ? name.substring(name.lastIndexOf(".") + 1) : "";
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             java.io.FileInputStream fis = new java.io.FileInputStream(file)) {
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO DOCUMENT (DOCUMENT_ID, FILE_NAME, FILE_EXTENSION, FILE_DATA, USER_ID) VALUES (DOCUMENT_SEQ.NEXTVAL, ?, ?, ?, ?)");
+            ps.setString(1, name); ps.setString(2, ext); ps.setBinaryStream(3, fis, (int)file.length()); ps.setInt(4, userId);
+            ps.executeUpdate();
+        } catch (Exception e) { showError("Upload failed: " + e.getMessage()); }
+    }
+
+    // Helpers
+    private static class LoginAddResult { UserOption user; String ip, time; LoginAddResult(UserOption u, String i, String t){user=u; ip=i; time=t;} }
+    private static class AuditAddResult { UserOption user; String type, time; AuditAddResult(UserOption u, String ty, String t){user=u; type=ty; time=t;} }
+    private static class DocumentAddResult { UserOption user; java.io.File file; DocumentAddResult(UserOption u, java.io.File f){user=u; file=f;} }
 
     private void deleteDocument(SimpleIntegerProperty id){
         try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM DOCUMENT WHERE DOCUMENT_ID=?")){
@@ -672,6 +797,10 @@ public class AdminViewController {
         nameCol.setCellValueFactory(data -> data.getValue().branchNameProperty);
         nameCol.setPrefWidth(200);
 
+        TableColumn<BranchRow, String> parentCol = new TableColumn<>("From parent branch");
+        parentCol.setCellValueFactory(data -> data.getValue().parentNameProperty);
+        parentCol.setPrefWidth(200);
+
         TableColumn<BranchRow, String> addressCol = new TableColumn<>("Address");
         addressCol.setCellValueFactory(data -> data.getValue().addressTextProperty);
         addressCol.setPrefWidth(420);
@@ -680,6 +809,7 @@ public class AdminViewController {
         actionsCol.setCellFactory(col -> new TableCell<>() {
             private final Button editBtn = new Button("Edit");
             private final Button deleteBtn = new Button("Delete");
+            private final Button tellersBtn = new Button("Tellers");
             {
                 editBtn.setOnAction(e -> {
                     BranchRow row = getTableView().getItems().get(getIndex());
@@ -689,8 +819,13 @@ public class AdminViewController {
                     BranchRow row = getTableView().getItems().get(getIndex());
                     deleteBranch(row.branchId);
                 });
+                tellersBtn.setOnAction(e -> {
+                    BranchRow row = getTableView().getItems().get(getIndex());
+                    showBranchTellers(row);
+                });
                 editBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
                 deleteBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
+                tellersBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white;");
             }
 
             @Override
@@ -699,14 +834,14 @@ public class AdminViewController {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    HBox box = new HBox(6, editBtn, deleteBtn);
+                    HBox box = new HBox(6, editBtn, tellersBtn, deleteBtn);
                     setGraphic(box);
                 }
             }
         });
-        actionsCol.setPrefWidth(200);
+        actionsCol.setPrefWidth(280);
 
-        branchesTable.getColumns().addAll(nameCol, addressCol, actionsCol);
+        branchesTable.getColumns().addAll(nameCol, parentCol, addressCol, actionsCol);
         branchesColumnsInitialized = true;
     }
 
@@ -716,12 +851,12 @@ public class AdminViewController {
         ObservableList<BranchRow> rows = FXCollections.observableArrayList();
         String filter = branchSearchField != null ? branchSearchField.getText() : null;
         String sql = """
-                SELECT b.BRANCH_ID, b.BRANCH_NAME,
-                       a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE
-                FROM BRANCH b
-                JOIN ADDRESS a ON b.ADDRESS_ID = a.ADDRESS_ID
-                WHERE (? IS NULL OR ? = '' OR UPPER(b.BRANCH_NAME) LIKE ?)
-                ORDER BY b.BRANCH_NAME
+                SELECT BRANCH_ID, BRANCH_NAME,
+                       COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE,
+                       PARENT_NAME
+                FROM v_branch_overview
+                WHERE (? IS NULL OR ? = '' OR UPPER(BRANCH_NAME) LIKE ?)
+                ORDER BY BRANCH_NAME
                 """;
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -733,17 +868,56 @@ public class AdminViewController {
                 while (rs.next()) {
                     int id = rs.getInt("BRANCH_ID");
                     String name = rs.getString("BRANCH_NAME");
+                    String parentName = rs.getString("PARENT_NAME");
                     String address = formatAddress(
                             rs.getString("COUNTRY"), rs.getString("STATE"), rs.getString("CITY"),
                             rs.getString("STREET"), rs.getInt("HOUSE_NUMBER"), rs.getInt("ZIP_CODE")
                     );
-                    rows.add(new BranchRow(id, name, address));
+                    rows.add(new BranchRow(id, name, parentName, address));
                 }
             }
         } catch (SQLException e) {
             showError("Error loading branches: " + e.getMessage());
         }
         branchesTable.setItems(rows);
+    }
+
+    // Zobrazí seznam tellerů pro vybranou pobočku včetně všech podřízených (hierarchický dotaz)
+    private void showBranchTellers(BranchRow row) {
+        ObservableList<String> items = FXCollections.observableArrayList();
+        String sql = """
+                SELECT tv.NAME, tv.SURNAME, tv.WORK_PHONE_NUMBER, tv.WORK_EMAIL_ADDRESS, tv.BRANCH_NAME
+                FROM v_teller_overview tv
+                JOIN v_branch_tree bt ON bt.BRANCH_ID = tv.BRANCH_ID
+                WHERE bt.ROOT_BRANCH_ID = ?
+                ORDER BY tv.BRANCH_NAME, tv.SURNAME, tv.NAME
+                """;
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, row.branchId.get());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String branch = rs.getString(5);
+                    String name = rs.getString(1) + " " + rs.getString(2);
+                    String phone = rs.getString(3);
+                    String email = rs.getString(4);
+                    String line = String.format("%s — %s (phone: %s, email: %s)", branch, name,
+                            phone == null ? "-" : phone, email == null ? "-" : email);
+                    items.add(line);
+                }
+            }
+        } catch (SQLException e) {
+            showError("Error loading tellers: " + e.getMessage());
+            return;
+        }
+
+        Dialog<Void> dlg = new Dialog<>();
+        dlg.setTitle("Tellers for branch including children");
+        ListView<String> list = new ListView<>(items);
+        list.setPlaceholder(new Label("No tellers found"));
+        dlg.getDialogPane().setContent(new VBox(8, new Label("Branch: " + row.branchNameProperty.get()), list));
+        dlg.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dlg.showAndWait();
     }
 
     private void editBranch(BranchRow row) {
@@ -766,6 +940,31 @@ public class AdminViewController {
         Label zipL = new Label("ZIP:");
         TextField zipF = new TextField();
 
+        // Parent branch dropdown (with empty option)
+        Label parentL = new Label("Parent branch:");
+        ObservableList<BranchOption> allBranches = loadBranches();
+        ComboBox<BranchOption> parentBox = new ComboBox<>(FXCollections.observableArrayList());
+        parentBox.getItems().add(null); // empty option
+        // exclude self from choices
+        for (BranchOption bo : allBranches) if (bo.branchId != row.branchId.get()) parentBox.getItems().add(bo);
+
+        // Prefill address from DB
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE, b.PARENT_BRANCH_ID FROM BRANCH b JOIN ADDRESS a ON b.ADDRESS_ID = a.ADDRESS_ID WHERE b.BRANCH_ID = ?")) {
+            ps.setInt(1, row.branchId.get());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    cF.setText(rs.getString(1)); sF.setText(rs.getString(2)); cityF.setText(rs.getString(3));
+                    streetF.setText(rs.getString(4)); houseF.setText(String.valueOf(rs.getInt(5))); zipF.setText(String.valueOf(rs.getInt(6)));
+                    int parentId = rs.getInt(7); if (!rs.wasNull()) {
+                        for (BranchOption bo : parentBox.getItems()) { if (bo != null && bo.branchId == parentId) { parentBox.getSelectionModel().select(bo); break; } }
+                    } else {
+                        parentBox.getSelectionModel().select(null);
+                    }
+                }
+            }
+        } catch (SQLException ignore) {}
+
         GridPane grid = new GridPane();
         grid.setHgap(8); grid.setVgap(8);
         grid.addRow(0, nameL, nameF);
@@ -775,6 +974,7 @@ public class AdminViewController {
         grid.addRow(4, streetL, streetF);
         grid.addRow(5, houseL, houseF);
         grid.addRow(6, zipL, zipF);
+        grid.addRow(7, parentL, parentBox);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -789,7 +989,10 @@ public class AdminViewController {
         if (res == null) return;
 
         // Insert new address row and update branch
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
+        Connection conn = null; boolean prevAuto = true;
+        try {
+            conn = ConnectionSingleton.getInstance().getConnection();
+            prevAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
             int newAddressId;
             try (PreparedStatement ps = conn.prepareStatement(
@@ -810,15 +1013,20 @@ public class AdminViewController {
                 }
             }
 
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE BRANCH SET BRANCH_NAME = ?, ADDRESS_ID = ? WHERE BRANCH_ID = ?")) {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE BRANCH SET BRANCH_NAME = ?, ADDRESS_ID = ?, PARENT_BRANCH_ID = ? WHERE BRANCH_ID = ?")) {
                 ps.setString(1, res.branchName);
                 ps.setInt(2, newAddressId);
-                ps.setInt(3, row.branchId.get());
+                BranchOption sel = parentBox.getValue();
+                if (sel == null) ps.setNull(3, java.sql.Types.INTEGER); else ps.setInt(3, sel.branchId);
+                ps.setInt(4, row.branchId.get());
                 ps.executeUpdate();
             }
             conn.commit();
         } catch (SQLException ex) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignore) {} }
             showError("Error updating branch: " + ex.getMessage());
+        } finally {
+            if (conn != null) { try { conn.setAutoCommit(prevAuto); } catch (SQLException ignore) {} try { conn.close(); } catch (SQLException ignore) {} }
         }
         reloadBranches();
     }
@@ -927,15 +1135,14 @@ public class AdminViewController {
         String nameFilter = userNameSearchField != null ? userNameSearchField.getText() : null;
         String surnameFilter = userSurnameSearchField != null ? userSurnameSearchField.getText() : null;
         ObservableList<UserRow> rows = FXCollections.observableArrayList();
+        // Use view: v_user_overview
         String sql = """
-                SELECT u.USER_ID, u.NAME, u.SURNAME, u.APPROVED, r.ROLE_NAME,
-                       a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE
-                FROM "User" u
-                JOIN ROLE r ON u.ROLE_ID = r.ROLE_ID
-                JOIN ADDRESS a ON u.ADDRESS_ID = a.ADDRESS_ID
-                WHERE (? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ?)
-                  AND (? IS NULL OR ? = '' OR UPPER(u.SURNAME) LIKE ?)
-                ORDER BY u.SURNAME, u.NAME
+                SELECT USER_ID, NAME, SURNAME, APPROVED, ROLE_NAME,
+                       COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE
+                FROM v_user_overview
+                WHERE (? IS NULL OR ? = '' OR UPPER(NAME) LIKE ?)
+                  AND (? IS NULL OR ? = '' OR UPPER(SURNAME) LIKE ?)
+                ORDER BY SURNAME, NAME
                 """;
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1029,18 +1236,15 @@ public class AdminViewController {
         ObservableList<ClientRow> rows = FXCollections.observableArrayList();
         String nameF = clientNameSearchField != null ? clientNameSearchField.getText() : null;
         String surF = clientSurnameSearchField != null ? clientSurnameSearchField.getText() : null;
+        // Use view: v_client_overview
         String sql = """
-                SELECT c.USER_ID, u.NAME, u.SURNAME, c.PHONE_NUMBER, c.EMAIL_ADDRESS,
-                       ut.NAME AS TELLER_NAME, ut.SURNAME AS TELLER_SURNAME,
-                       a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE
-                FROM CLIENT c
-                JOIN "User" u ON u.USER_ID = c.USER_ID
-                JOIN TELLER t ON t.USER_ID = c.TELLER_ID
-                JOIN "User" ut ON ut.USER_ID = t.USER_ID
-                JOIN ADDRESS a ON a.ADDRESS_ID = u.ADDRESS_ID
-                WHERE (? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ?)
-                  AND (? IS NULL OR ? = '' OR UPPER(u.SURNAME) LIKE ?)
-                ORDER BY u.SURNAME, u.NAME
+                SELECT USER_ID, NAME, SURNAME, PHONE_NUMBER, EMAIL_ADDRESS,
+                       TELLER_NAME, TELLER_SURNAME,
+                       COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE
+                FROM v_client_overview
+                WHERE (? IS NULL OR ? = '' OR UPPER(NAME) LIKE ?)
+                  AND (? IS NULL OR ? = '' OR UPPER(SURNAME) LIKE ?)
+                ORDER BY SURNAME, NAME
                 """;
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1054,7 +1258,8 @@ public class AdminViewController {
                     String n = rs.getString("NAME");
                     String s = rs.getString("SURNAME");
                     String contact = rs.getString("PHONE_NUMBER") + " / " + rs.getString("EMAIL_ADDRESS");
-                    String teller = rs.getString("TELLER_NAME") + " " + rs.getString("TELLER_SURNAME");
+                    String teller = ((rs.getString("TELLER_NAME") == null ? "-" : rs.getString("TELLER_NAME"))
+                            + " " + (rs.getString("TELLER_SURNAME") == null ? "" : rs.getString("TELLER_SURNAME"))).trim();
                     String addr = formatAddress(rs.getString("COUNTRY"), rs.getString("STATE"), rs.getString("CITY"), rs.getString("STREET"), rs.getInt("HOUSE_NUMBER"), rs.getInt("ZIP_CODE"));
                     rows.add(new ClientRow(id, n, s, contact, teller, addr));
                 }
@@ -1064,38 +1269,61 @@ public class AdminViewController {
     }
 
     private void editClient(ClientRow row) {
-        // Implement reassignment to teller and optional address change (new address row)
-        Dialog<ClientEditResult> dlg = new Dialog<>();
+        Dialog<ClientAddResult> dlg = new Dialog<>(); // Use AddResult DTO to hold all fields
         dlg.setTitle("Edit Client");
+        
+        TextField nameF = new TextField(); TextField surF = new TextField();
+        TextField birthF = new TextField(); TextField phoneF = new TextField(); TextField emailF = new TextField();
         ComboBox<UserOption> tellerBox = new ComboBox<>(loadTellers());
-        tellerBox.getSelectionModel().selectFirst();
-        TextField cF = new TextField(); TextField sF = new TextField(); TextField cityF = new TextField(); TextField streetF = new TextField(); TextField houseF = new TextField(); TextField zipF = new TextField(); TextField countryF = new TextField();
-        GridPane grid = new GridPane(); grid.setHgap(8); grid.setVgap(8);
-        grid.addRow(0, new Label("Reassign Teller:"), tellerBox);
-        grid.addRow(1, new Label("Country:"), countryF);
-        grid.addRow(2, new Label("State:"), cF);
-        grid.addRow(3, new Label("City:"), cityF);
-        grid.addRow(4, new Label("Street:"), streetF);
-        grid.addRow(5, new Label("House No:"), houseF);
-        grid.addRow(6, new Label("ZIP:"), zipF);
-        dlg.getDialogPane().setContent(grid);
+        TextField countryF = new TextField(); TextField stateF = new TextField(); TextField cityF = new TextField();
+        TextField streetF = new TextField(); TextField houseF = new TextField(); TextField zipF = new TextField();
+
+        // Load current data from DB
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT u.NAME, u.SURNAME, c.BIRTH_NUMBER, c.PHONE_NUMBER, c.EMAIL_ADDRESS, c.TELLER_ID, a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE " +
+                     "FROM CLIENT c JOIN \"User\" u ON c.USER_ID = u.USER_ID JOIN ADDRESS a ON u.ADDRESS_ID = a.ADDRESS_ID WHERE c.USER_ID = ?")) {
+            ps.setInt(1, row.userId.get());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    nameF.setText(rs.getString(1)); surF.setText(rs.getString(2)); birthF.setText(rs.getString(3));
+                    phoneF.setText(rs.getString(4)); emailF.setText(rs.getString(5));
+                    int tId = rs.getInt(6);
+                    for (UserOption t : tellerBox.getItems()) if (t.userId == tId) tellerBox.getSelectionModel().select(t);
+                    countryF.setText(rs.getString(7)); stateF.setText(rs.getString(8)); cityF.setText(rs.getString(9));
+                    streetF.setText(rs.getString(10)); houseF.setText(String.valueOf(rs.getInt(11))); zipF.setText(String.valueOf(rs.getInt(12)));
+                }
+            }
+        } catch (SQLException ignore) {}
+
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        g.addRow(0,new Label("Name:"), nameF); g.addRow(1,new Label("Surname:"), surF);
+        g.addRow(2,new Label("Birth number:"), birthF); g.addRow(3,new Label("Phone:"), phoneF); g.addRow(4,new Label("Email:"), emailF);
+        g.addRow(5,new Label("Teller:"), tellerBox);
+        g.addRow(6,new Label("Country:"), countryF); g.addRow(7,new Label("State:"), stateF); g.addRow(8,new Label("City:"), cityF);
+        g.addRow(9,new Label("Street:"), streetF); g.addRow(10,new Label("House No:"), houseF); g.addRow(11,new Label("ZIP:"), zipF);
+        
+        dlg.getDialogPane().setContent(g);
         dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dlg.setResultConverter(b -> b==ButtonType.OK ? new ClientEditResult(tellerBox.getValue(), countryF.getText(), cF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()) : null);
-        ClientEditResult res = dlg.showAndWait().orElse(null);
+        dlg.setResultConverter(b -> b == ButtonType.OK ? new ClientAddResult(nameF.getText(), surF.getText(), "", birthF.getText(), phoneF.getText(), emailF.getText(), tellerBox.getValue(), countryF.getText(), stateF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()) : null);
+        
+        ClientAddResult res = dlg.showAndWait().orElse(null);
         if (res == null) return;
+
         try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
             conn.setAutoCommit(false);
-            // Insert new address
-            int newAddrId;
+            int addrId;
             try (PreparedStatement ps = conn.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES(ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)")) {
                 ps.setString(1, res.country); ps.setString(2, res.state); ps.setString(3, res.city); ps.setString(4, res.street); ps.setInt(5, parseIntSafe(res.house)); ps.setInt(6, parseIntSafe(res.zip));
                 ps.executeUpdate();
             }
-            try (PreparedStatement ps = conn.prepareStatement("SELECT ADDRESS_SEQ.CURRVAL AS ID FROM dual"); ResultSet rs = ps.executeQuery()) { rs.next(); newAddrId = rs.getInt("ID"); }
-            // Update user address
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET ADDRESS_ID = ? WHERE USER_ID = ?")) { ps.setInt(1, newAddrId); ps.setInt(2, row.userId.get()); ps.executeUpdate(); }
-            // Reassign teller
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE CLIENT SET TELLER_ID = ? WHERE USER_ID = ?")) { ps.setInt(1, res.teller.userId); ps.setInt(2, row.userId.get()); ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement("SELECT ADDRESS_SEQ.CURRVAL FROM dual"); ResultSet rs = ps.executeQuery()) { rs.next(); addrId = rs.getInt(1); }
+            
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET NAME=?, SURNAME=?, ADDRESS_ID=? WHERE USER_ID=?")) {
+                ps.setString(1, res.name); ps.setString(2, res.surname); ps.setInt(3, addrId); ps.setInt(4, row.userId.get()); ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE CLIENT SET BIRTH_NUMBER=?, PHONE_NUMBER=?, EMAIL_ADDRESS=?, TELLER_ID=? WHERE USER_ID=?")) {
+                ps.setString(1, res.birth); ps.setString(2, res.phone); ps.setString(3, res.email); ps.setInt(4, res.teller.userId); ps.setInt(5, row.userId.get()); ps.executeUpdate();
+            }
             conn.commit();
         } catch (SQLException e) { showError("Error editing client: " + e.getMessage()); }
         reloadClients();
@@ -1182,31 +1410,58 @@ public class AdminViewController {
 
     private void editTeller(TellerRow row) {
         Dialog<TellerEditResult> dlg = new Dialog<>(); dlg.setTitle("Edit Teller");
-        ComboBox<BranchOption> branchBox = new ComboBox<>(loadBranches()); branchBox.getSelectionModel().selectFirst();
-        TextField cF = new TextField(); TextField sF = new TextField(); TextField cityF = new TextField(); TextField streetF = new TextField(); TextField houseF = new TextField(); TextField zipF = new TextField(); TextField countryF = new TextField();
+        ComboBox<BranchOption> branchBox = new ComboBox<>(loadBranches());
+        TextField phoneF = new TextField(); TextField emailF = new TextField();
+        TextField cF = new TextField(); TextField sF = new TextField(); TextField cityF = new TextField();
+        TextField streetF = new TextField(); TextField houseF = new TextField(); TextField zipF = new TextField(); TextField countryF = new TextField();
+
+        // Prefill current teller data
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT t.WORK_PHONE_NUMBER, t.WORK_EMAIL_ADDRESS, t.BRANCH_ID, a.COUNTRY, a.STATE, a.CITY, a.STREET, a.HOUSE_NUMBER, a.ZIP_CODE " +
+                     "FROM TELLER t JOIN \"User\" u ON t.USER_ID = u.USER_ID JOIN ADDRESS a ON u.ADDRESS_ID = a.ADDRESS_ID WHERE t.USER_ID = ?")) {
+            ps.setInt(1, row.userId.get());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    phoneF.setText(rs.getString(1)); emailF.setText(rs.getString(2));
+                    int bId = rs.getInt(3);
+                    for (BranchOption b : branchBox.getItems()) if (b.branchId == bId) branchBox.getSelectionModel().select(b);
+                    countryF.setText(rs.getString(4)); sF.setText(rs.getString(5)); cityF.setText(rs.getString(6));
+                    streetF.setText(rs.getString(7)); houseF.setText(String.valueOf(rs.getInt(8))); zipF.setText(String.valueOf(rs.getInt(9)));
+                }
+            }
+        } catch (SQLException ignore) {}
+
         GridPane grid = new GridPane(); grid.setHgap(8); grid.setVgap(8);
-        grid.addRow(0, new Label("Reassign Branch:"), branchBox);
-        grid.addRow(1, new Label("Country:"), countryF);
-        grid.addRow(2, new Label("State:"), sF);
-        grid.addRow(3, new Label("City:"), cityF);
-        grid.addRow(4, new Label("Street:"), streetF);
-        grid.addRow(5, new Label("House No:"), houseF);
-        grid.addRow(6, new Label("ZIP:"), zipF);
+        grid.addRow(0, new Label("Work Phone:"), phoneF);
+        grid.addRow(1, new Label("Work Email:"), emailF);
+        grid.addRow(2, new Label("Branch:"), branchBox);
+        grid.addRow(3, new Label("Country:"), countryF);
+        grid.addRow(4, new Label("State:"), sF);
+        grid.addRow(5, new Label("City:"), cityF);
+        grid.addRow(6, new Label("Street:"), streetF);
+        grid.addRow(7, new Label("House No:"), houseF);
+        grid.addRow(8, new Label("ZIP:"), zipF);
+
         dlg.getDialogPane().setContent(grid);
         dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dlg.setResultConverter(b -> b==ButtonType.OK? new TellerEditResult(branchBox.getValue(), countryF.getText(), sF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()) : null);
-        TellerEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()){
+        dlg.setResultConverter(b -> b == ButtonType.OK ? new TellerEditResult(branchBox.getValue(), phoneF.getText(), emailF.getText(), countryF.getText(), sF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()) : null);
+
+        TellerEditResult res = dlg.showAndWait().orElse(null); if (res == null) return;
+        Connection conn = null; boolean prevAuto = true;
+        try {
+            conn = ConnectionSingleton.getInstance().getConnection();
+            prevAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
-            // New address
             int newAddrId;
             try (PreparedStatement ps = conn.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES(ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)")){
                 ps.setString(1,res.country); ps.setString(2,res.state); ps.setString(3,res.city); ps.setString(4,res.street); ps.setInt(5, parseIntSafe(res.house)); ps.setInt(6, parseIntSafe(res.zip));
                 ps.executeUpdate();
             }
-            try (PreparedStatement ps = conn.prepareStatement("SELECT ADDRESS_SEQ.CURRVAL AS ID FROM dual"); ResultSet rs = ps.executeQuery()) { rs.next(); newAddrId = rs.getInt("ID"); }
+            try (PreparedStatement ps = conn.prepareStatement("SELECT ADDRESS_SEQ.CURRVAL FROM dual"); ResultSet rs = ps.executeQuery()) { rs.next(); newAddrId = rs.getInt(1); }
             try (PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET ADDRESS_ID = ? WHERE USER_ID = ?")) { ps.setInt(1,newAddrId); ps.setInt(2,row.userId.get()); ps.executeUpdate(); }
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE TELLER SET BRANCH_ID = ? WHERE USER_ID = ?")) { ps.setInt(1,res.branch.branchId); ps.setInt(2,row.userId.get()); ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE TELLER SET BRANCH_ID = ?, WORK_PHONE_NUMBER = ?, WORK_EMAIL_ADDRESS = ? WHERE USER_ID = ?")) {
+                ps.setInt(1,res.branch.branchId); ps.setString(2, res.phone); ps.setString(3, res.email); ps.setInt(4,row.userId.get()); ps.executeUpdate();
+            }
             conn.commit();
         } catch (SQLException e){ showError("Error editing teller: "+e.getMessage()); }
         reloadTellers();
@@ -1256,16 +1511,15 @@ public class AdminViewController {
         String nameF = accountOwnerNameField!=null? accountOwnerNameField.getText():null;
         String surF = accountOwnerSurnameField!=null? accountOwnerSurnameField.getText():null;
         String accF = accountNumberSearchField!=null? accountNumberSearchField.getText():null;
+        // Use view: v_account_overview
         String sql = """
-                SELECT a.ACCOUNT_ID, a.ACCOUNT_NUMBER, a.ACCOUNT_BALANCE,
-                       u.NAME, u.SURNAME
-                FROM ACCOUNT a
-                JOIN CLIENT c ON c.USER_ID = a.CLIENT_ID
-                JOIN "User" u ON u.USER_ID = c.USER_ID
-                WHERE (? IS NULL OR ? = '' OR UPPER(u.NAME) LIKE ?)
-                  AND (? IS NULL OR ? = '' OR UPPER(u.SURNAME) LIKE ?)
-                  AND (? IS NULL OR ? = '' OR UPPER(a.ACCOUNT_NUMBER) LIKE ?)
-                ORDER BY a.ACCOUNT_NUMBER
+                SELECT ACCOUNT_ID, ACCOUNT_NUMBER, ACCOUNT_BALANCE,
+                       OWNER_NAME, OWNER_SURNAME
+                FROM v_account_overview
+                WHERE (? IS NULL OR ? = '' OR UPPER(OWNER_NAME) LIKE ?)
+                  AND (? IS NULL OR ? = '' OR UPPER(OWNER_SURNAME) LIKE ?)
+                  AND (? IS NULL OR ? = '' OR UPPER(ACCOUNT_NUMBER) LIKE ?)
+                ORDER BY ACCOUNT_NUMBER
                 """;
         try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             String likeN = (nameF==null||nameF.isEmpty())? null : nameF.toUpperCase()+"%";
@@ -1278,7 +1532,7 @@ public class AdminViewController {
                 while (rs.next()){
                     rows.add(new AccountRow(
                             rs.getInt("ACCOUNT_ID"), rs.getString("ACCOUNT_NUMBER"),
-                            rs.getString("NAME")+" "+rs.getString("SURNAME"),
+                            rs.getString("OWNER_NAME")+" "+rs.getString("OWNER_SURNAME"),
                             String.valueOf(rs.getBigDecimal("ACCOUNT_BALANCE"))
                     ));
                 }
@@ -1289,19 +1543,38 @@ public class AdminViewController {
 
     private void editAccount(AccountRow row){
         Dialog<AccountEditResult> dlg = new Dialog<>(); dlg.setTitle("Edit Account");
-        ComboBox<UserOption> clientBox = new ComboBox<>(loadClients()); clientBox.getSelectionModel().selectFirst();
+        ComboBox<UserOption> clientBox = new ComboBox<>(loadClients());
+
+        // Prefill client selection
+        for (UserOption u : clientBox.getItems()) {
+            if (u.display.equals(row.owner.get())) {
+                clientBox.getSelectionModel().select(u);
+                break;
+            }
+        }
+
         TextField numberF = new TextField(row.number.get());
-        TextField balanceF = new TextField();
+        TextField balanceF = new TextField(row.balance.get());
+
         GridPane grid = new GridPane(); grid.setHgap(8); grid.setVgap(8);
-        grid.addRow(0, new Label("Client:"), clientBox);
-        grid.addRow(1, new Label("Number:"), numberF);
+        grid.addRow(0, new Label("Owner:"), clientBox);
+        grid.addRow(1, new Label("Account Number:"), numberF);
         grid.addRow(2, new Label("Balance:"), balanceF);
+
         dlg.getDialogPane().setContent(grid);
         dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dlg.setResultConverter(b-> b==ButtonType.OK? new AccountEditResult(clientBox.getValue(), numberF.getText(), balanceF.getText()) : null);
-        AccountEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE ACCOUNT SET CLIENT_ID = ?, ACCOUNT_NUMBER = ?, ACCOUNT_BALANCE = ? WHERE ACCOUNT_ID = ?")){
-            ps.setInt(1, res.client.userId); ps.setString(2, res.number); ps.setBigDecimal(3, new java.math.BigDecimal(res.balance)); ps.setInt(4, row.accountId.get()); ps.executeUpdate();
+        dlg.setResultConverter(bt -> bt == ButtonType.OK ? new AccountEditResult(clientBox.getValue(), numberF.getText(), balanceF.getText()) : null);
+
+        AccountEditResult res = dlg.showAndWait().orElse(null);
+        if (res == null || res.client == null) return;
+
+        try (Connection conn = ConnectionSingleton.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE ACCOUNT SET CLIENT_ID = ?, ACCOUNT_NUMBER = ?, ACCOUNT_BALANCE = ? WHERE ACCOUNT_ID = ?")){
+            ps.setInt(1, res.client.userId);
+            ps.setString(2, res.number);
+            ps.setBigDecimal(3, new java.math.BigDecimal(res.balance));
+            ps.setInt(4, row.accountId.get());
+            ps.executeUpdate();
         } catch (SQLException e){ showError("Error editing account: "+e.getMessage()); }
         reloadAccounts();
     }
@@ -1356,25 +1629,22 @@ public class AdminViewController {
         java.sql.Date to = dateToPicker!=null && dateToPicker.getValue()!=null? java.sql.Date.valueOf(dateToPicker.getValue()) : null;
 
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT t.TRANSACTION_ID, t.TRANSFER_AMOUNT, t.TRANSACTION_TIME, tt.TRANSACTION_TYPE_NAME, ");
-        sb.append("af.ACCOUNT_NUMBER AS ACC_FROM, at.ACCOUNT_NUMBER AS ACC_TO ");
-        sb.append("FROM TRANSACTION t ");
-        sb.append("JOIN TRANSACTION_TYPE tt ON tt.TRANSACTION_TYPE_ID = t.TRANSACTION_TYPE_ID ");
-        sb.append("LEFT JOIN ACCOUNT af ON af.ACCOUNT_ID = t.ACCOUNT_FROM_ID ");
-        sb.append("LEFT JOIN ACCOUNT at ON at.ACCOUNT_ID = t.ACCOUNT_TO_ID ");
+        sb.append("SELECT TRANSACTION_ID, TRANSFER_AMOUNT, TRANSACTION_TIME, TRANSACTION_TYPE_NAME, ");
+        sb.append("ACCOUNT_FROM_NUMBER AS ACC_FROM, ACCOUNT_TO_NUMBER AS ACC_TO ");
+        sb.append("FROM v_transaction_overview ");
         sb.append("WHERE 1=1 ");
-        if (typeFilter != null && !typeFilter.isEmpty()) sb.append("AND tt.TRANSACTION_TYPE_NAME = ? ");
-        if (min != null) sb.append("AND ABS(t.TRANSFER_AMOUNT) >= ? ");
-        if (max != null) sb.append("AND ABS(t.TRANSFER_AMOUNT) <= ? ");
-        if (from != null) sb.append("AND t.TRANSACTION_TIME >= ? ");
-        if (to != null) sb.append("AND t.TRANSACTION_TIME <= ? ");
-        if (accFilter != null && !accFilter.isEmpty()) sb.append("AND (UPPER(af.ACCOUNT_NUMBER) LIKE ? OR UPPER(at.ACCOUNT_NUMBER) LIKE ?) ");
+        if (typeFilter != null && !typeFilter.isEmpty()) sb.append("AND TRANSACTION_TYPE_NAME = ? ");
+        if (min != null) sb.append("AND ABS(TRANSFER_AMOUNT) >= ? ");
+        if (max != null) sb.append("AND ABS(TRANSFER_AMOUNT) <= ? ");
+        if (from != null) sb.append("AND TRANSACTION_TIME >= ? ");
+        if (to != null) sb.append("AND TRANSACTION_TIME <= ? ");
+        if (accFilter != null && !accFilter.isEmpty()) sb.append("AND (UPPER(ACCOUNT_FROM_NUMBER) LIKE ? OR UPPER(ACCOUNT_TO_NUMBER) LIKE ?) ");
         // Direction only applies if an account filter is provided (context for direction)
         if (accFilter != null && !accFilter.isEmpty() && dir != null && !dir.equals("All")) {
-            if (dir.equals("Incoming")) sb.append("AND UPPER(at.ACCOUNT_NUMBER) LIKE ? ");
-            else if (dir.equals("Outgoing")) sb.append("AND UPPER(af.ACCOUNT_NUMBER) LIKE ? ");
+            if (dir.equals("Incoming")) sb.append("AND UPPER(ACCOUNT_TO_NUMBER) LIKE ? ");
+            else if (dir.equals("Outgoing")) sb.append("AND UPPER(ACCOUNT_FROM_NUMBER) LIKE ? ");
         }
-        sb.append("ORDER BY t.TRANSACTION_TIME DESC");
+        sb.append("ORDER BY TRANSACTION_TIME DESC");
 
         try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sb.toString())){
             int idx = 1;
@@ -1472,20 +1742,16 @@ public class AdminViewController {
         java.sql.Date to = messageDateToPicker != null && messageDateToPicker.getValue() != null ? java.sql.Date.valueOf(messageDateToPicker.getValue()) : null;
 
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT m.MESSAGE_ID, ");
-        sb.append("uf.NAME AS FROM_NAME, uf.SURNAME AS FROM_SURNAME, ");
-        sb.append("ut.NAME AS TO_NAME, ut.SURNAME AS TO_SURNAME, m.MESSAGE_TEXT ");
-        sb.append("FROM MESSAGE m ");
-        sb.append("LEFT JOIN \"User\" uf ON uf.USER_ID = m.USER_FROM_ID ");
-        sb.append("JOIN \"User\" ut ON ut.USER_ID = m.USER_TO_ID ");
+        sb.append("SELECT MESSAGE_ID, FROM_NAME, FROM_SURNAME, TO_NAME, TO_SURNAME, MESSAGE_TEXT, MESSAGE_SENT_AT ");
+        sb.append("FROM v_message_overview ");
         sb.append("WHERE 1=1 ");
-        if (from != null) sb.append("AND m.MESSAGE_SENT_AT >= ? ");
-        if (to != null) sb.append("AND m.MESSAGE_SENT_AT <= ? ");
+        if (from != null) sb.append("AND MESSAGE_SENT_AT >= ? ");
+        if (to != null) sb.append("AND MESSAGE_SENT_AT <= ? ");
         if (userTerm != null && !userTerm.isEmpty()) {
-            sb.append("AND (UPPER(NVL(uf.NAME,'')) LIKE ? OR UPPER(NVL(uf.SURNAME,'')) LIKE ? ");
-            sb.append("OR UPPER(ut.NAME) LIKE ? OR UPPER(ut.SURNAME) LIKE ?) ");
+            sb.append("AND (UPPER(NVL(FROM_NAME,'')) LIKE ? OR UPPER(NVL(FROM_SURNAME,'')) LIKE ? ");
+            sb.append("OR UPPER(TO_NAME) LIKE ? OR UPPER(TO_SURNAME) LIKE ?) ");
         }
-        sb.append("ORDER BY m.MESSAGE_SENT_AT DESC");
+        sb.append("ORDER BY MESSAGE_SENT_AT DESC");
 
         try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement(sb.toString())){
             int idx = 1;
@@ -1744,12 +2010,12 @@ public class AdminViewController {
         TextField fnF = new TextField(fn==null? "" : fn);
         TextField extF = new TextField(ext==null? "" : ext);
         ComboBox<UserOption> userBox = new ComboBox<>(loadAllUsers()); if (userId!=null){ for (UserOption u : userBox.getItems()) if (u.userId==userId){ userBox.getSelectionModel().select(u); break; } }
-        Dialog<Boolean> dlg = new Dialog<>(); dlg.setTitle("Edit Document"); GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
+        Dialog<ButtonType> dlg = new Dialog<>(); dlg.setTitle("Edit Document"); GridPane g = new GridPane(); g.setHgap(8); g.setVgap(8);
         g.addRow(0, new Label("File name:"), fnF);
         g.addRow(1, new Label("Extension:"), extF);
         g.addRow(2, new Label("Owner:"), userBox);
         dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        if (!dlg.showAndWait().orElse(false)) return;
+        if (dlg.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
         try (Connection conn = ConnectionSingleton.getInstance().getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE DOCUMENT SET FILE_NAME=?, FILE_EXTENSION=?, USER_ID=? WHERE DOCUMENT_ID=?")){
             UserOption u = userBox.getValue(); if (u==null){ showError("Owner required"); return; }
             ps.setString(1, fnF.getText()); ps.setString(2, extF.getText()); ps.setInt(3, u.userId); ps.setInt(4, id); ps.executeUpdate();
@@ -1928,10 +2194,12 @@ public class AdminViewController {
     public static class BranchRow {
         final SimpleIntegerProperty branchId = new SimpleIntegerProperty();
         final SimpleStringProperty branchNameProperty = new SimpleStringProperty();
+        final SimpleStringProperty parentNameProperty = new SimpleStringProperty();
         final SimpleStringProperty addressTextProperty = new SimpleStringProperty();
-        public BranchRow(int id, String name, String addressText) {
+        public BranchRow(int id, String name, String parentName, String addressText) {
             branchId.set(id);
             branchNameProperty.set(name);
+            parentNameProperty.set(parentName == null ? "" : parentName);
             addressTextProperty.set(addressText);
         }
     }
@@ -2084,6 +2352,12 @@ public class AdminViewController {
     @FXML private void onAddBranch(){
         Dialog<BranchEditResult> dlg = new Dialog<>(); dlg.setTitle("Add Branch");
         TextField nameF = new TextField(); TextField cF=new TextField(); TextField sF=new TextField(); TextField cityF=new TextField(); TextField streetF=new TextField(); TextField houseF=new TextField(); TextField zipF=new TextField();
+        Label parentL = new Label("Parent branch:");
+        ObservableList<BranchOption> allBranches = loadBranches();
+        ComboBox<BranchOption> parentBox = new ComboBox<>(FXCollections.observableArrayList());
+        parentBox.getItems().add(null); // empty option
+        parentBox.getItems().addAll(allBranches);
+        parentBox.getSelectionModel().select(null);
         GridPane grid=new GridPane(); grid.setHgap(8); grid.setVgap(8);
         grid.addRow(0,new Label("Branch name:"), nameF);
         grid.addRow(1,new Label("Country:"), cF);
@@ -2092,21 +2366,33 @@ public class AdminViewController {
         grid.addRow(4,new Label("Street:"), streetF);
         grid.addRow(5,new Label("House No:"), houseF);
         grid.addRow(6,new Label("ZIP:"), zipF);
+        grid.addRow(7,parentL, parentBox);
         dlg.getDialogPane().setContent(grid); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         dlg.setResultConverter(b-> b==ButtonType.OK? new BranchEditResult(nameF.getText(), cF.getText(), sF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()):null);
         BranchEditResult res = dlg.showAndWait().orElse(null); if (res==null) return;
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()){
-            conn.setAutoCommit(false);
+        Connection conn2 = null; boolean prevAuto2 = true;
+        try {
+            conn2 = ConnectionSingleton.getInstance().getConnection();
+            prevAuto2 = conn2.getAutoCommit();
+            conn2.setAutoCommit(false);
             int addrId;
-            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES(ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)")){
+            try (PreparedStatement ps = conn2.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES(ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)")){
                 ps.setString(1,res.country); ps.setString(2,res.state); ps.setString(3,res.city); ps.setString(4,res.street); ps.setInt(5, parseIntSafe(res.houseNumber)); ps.setInt(6, parseIntSafe(res.zip)); ps.executeUpdate();
             }
-            try (PreparedStatement ps = conn.prepareStatement("SELECT ADDRESS_SEQ.CURRVAL AS ID FROM dual"); ResultSet rs = ps.executeQuery()){ rs.next(); addrId = rs.getInt("ID"); }
-            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO BRANCH(BRANCH_ID, BRANCH_NAME, ADDRESS_ID) VALUES(BRANCH_SEQ.NEXTVAL, ?, ?)")){
-                ps.setString(1, res.branchName); ps.setInt(2, addrId); ps.executeUpdate();
+            try (PreparedStatement ps = conn2.prepareStatement("SELECT ADDRESS_SEQ.CURRVAL AS ID FROM dual"); ResultSet rs = ps.executeQuery()){ rs.next(); addrId = rs.getInt("ID"); }
+            try (PreparedStatement ps = conn2.prepareStatement("INSERT INTO BRANCH(BRANCH_ID, BRANCH_NAME, ADDRESS_ID, PARENT_BRANCH_ID) VALUES(BRANCH_SEQ.NEXTVAL, ?, ?, ?)")){
+                ps.setString(1, res.branchName); ps.setInt(2, addrId);
+                BranchOption sel = parentBox.getValue();
+                if (sel == null) ps.setNull(3, java.sql.Types.INTEGER); else ps.setInt(3, sel.branchId);
+                ps.executeUpdate();
             }
-            conn.commit();
-        } catch (SQLException e){ showError("Error adding branch: "+e.getMessage()); }
+            conn2.commit();
+        } catch (SQLException e){
+            if (conn2 != null) { try { conn2.rollback(); } catch (SQLException ignore) {} }
+            showError("Error adding branch: "+e.getMessage());
+        } finally {
+            if (conn2 != null) { try { conn2.setAutoCommit(prevAuto2); } catch (SQLException ignore) {} try { conn2.close(); } catch (SQLException ignore) {} }
+        }
         reloadBranches();
     }
 
@@ -2130,7 +2416,10 @@ public class AdminViewController {
         dlg.getDialogPane().setContent(grid); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         dlg.setResultConverter(b-> b==ButtonType.OK? new UserAddResult(nameF.getText(), surnameF.getText(), passF.getText(), activeC.isSelected(), roleBox.getValue(), countryF.getText(), stateF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()) : null);
         UserAddResult res = dlg.showAndWait().orElse(null); if (res==null) return;
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()){
+        Connection conn = null; boolean prevAuto = true;
+        try {
+            conn = ConnectionSingleton.getInstance().getConnection();
+            prevAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
             int addrId;
             try (PreparedStatement ps = conn.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES(ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)")){
@@ -2142,7 +2431,12 @@ public class AdminViewController {
                 ps.executeUpdate();
             }
             conn.commit();
-        } catch (SQLException e){ showError("Error adding user: "+e.getMessage()); }
+        } catch (SQLException e){
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignore) {} }
+            showError("Error adding user: "+e.getMessage());
+        } finally {
+            if (conn != null) { try { conn.setAutoCommit(prevAuto); } catch (SQLException ignore) {} try { conn.close(); } catch (SQLException ignore) {} }
+        }
         reloadUsers();
     }
 
@@ -2161,7 +2455,10 @@ public class AdminViewController {
         dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         dlg.setResultConverter(b-> b==ButtonType.OK? new ClientAddResult(nameF.getText(), surnameF.getText(), passF.getText(), birthF.getText(), phoneF.getText(), emailF.getText(), tellerBox.getValue(), countryF.getText(), stateF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()) : null);
         ClientAddResult res = dlg.showAndWait().orElse(null); if (res==null) return;
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()){
+        Connection conn = null; boolean prevAuto = true;
+        try {
+            conn = ConnectionSingleton.getInstance().getConnection();
+            prevAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
             int addrId;
             try (PreparedStatement ps = conn.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES(ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)")){
@@ -2177,7 +2474,12 @@ public class AdminViewController {
                 ps.setInt(1,newUserId); ps.setString(2,res.birth); ps.setString(3,res.phone); ps.setString(4,res.email); ps.setInt(5, res.teller.userId); ps.executeUpdate();
             }
             conn.commit();
-        } catch (SQLException e){ showError("Error adding client: "+e.getMessage()); }
+        } catch (SQLException e){
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignore) {} }
+            showError("Error adding client: "+e.getMessage());
+        } finally {
+            if (conn != null) { try { conn.setAutoCommit(prevAuto); } catch (SQLException ignore) {} try { conn.close(); } catch (SQLException ignore) {} }
+        }
         reloadClients();
     }
 
@@ -2194,7 +2496,10 @@ public class AdminViewController {
         dlg.getDialogPane().setContent(g); dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         dlg.setResultConverter(b-> b==ButtonType.OK? new TellerAddResult(nameF.getText(), surnameF.getText(), passF.getText(), phoneF.getText(), emailF.getText(), branchBox.getValue(), countryF.getText(), stateF.getText(), cityF.getText(), streetF.getText(), houseF.getText(), zipF.getText()) : null);
         TellerAddResult res = dlg.showAndWait().orElse(null); if (res==null) return;
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()){
+        Connection conn = null; boolean prevAuto = true;
+        try {
+            conn = ConnectionSingleton.getInstance().getConnection();
+            prevAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
             int addrId;
             try (PreparedStatement ps = conn.prepareStatement("INSERT INTO ADDRESS(ADDRESS_ID, COUNTRY, STATE, CITY, STREET, HOUSE_NUMBER, ZIP_CODE) VALUES(ADDRESS_SEQ.NEXTVAL, ?, ?, ?, ?, ?, ?)")){
@@ -2210,7 +2515,12 @@ public class AdminViewController {
                 ps.setInt(1,newUserId); ps.setString(2,res.phone); ps.setString(3,res.email); ps.setInt(4,res.branch.branchId); ps.executeUpdate();
             }
             conn.commit();
-        } catch (SQLException e){ showError("Error adding teller: "+e.getMessage()); }
+        } catch (SQLException e){
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignore) {} }
+            showError("Error adding teller: "+e.getMessage());
+        } finally {
+            if (conn != null) { try { conn.setAutoCommit(prevAuto); } catch (SQLException ignore) {} try { conn.close(); } catch (SQLException ignore) {} }
+        }
         reloadTellers();
     }
 
@@ -2394,7 +2704,12 @@ public class AdminViewController {
 
     // DTOs for dialog results
     private static class ClientEditResult { final UserOption teller; final String country,state,city,street,house,zip; ClientEditResult(UserOption t,String c1,String c2,String c3,String st,String h,String z){ teller=t; country=c1; state=c2; city=c3; street=st; house=h; zip=z; } }
-    private static class TellerEditResult { final BranchOption branch; final String country,state,city,street,house,zip; TellerEditResult(BranchOption b,String c1,String c2,String c3,String st,String h,String z){ branch=b; country=c1; state=c2; city=c3; street=st; house=h; zip=z; } }
+    private static class TellerEditResult {
+        final BranchOption branch; final String phone, email, country,state,city,street,house,zip;
+        TellerEditResult(BranchOption b, String ph, String em, String c1,String c2,String c3,String st,String h,String z){
+            branch=b; phone=ph; email=em; country=c1; state=c2; city=c3; street=st; house=h; zip=z;
+        }
+    }
     private static class UserAddResult { final String name,surname,password; final boolean active; final RoleOption role; final String country,state,city,street,house,zip; UserAddResult(String n,String s,String p,boolean a,RoleOption r,String c1,String c2,String c3,String st,String h,String z){name=n;surname=s;password=p;active=a;role=r;country=c1;state=c2;city=c3;street=st;house=h;zip=z;} }
     private static class ClientAddResult { final String name,surname,password,birth,phone,email; final UserOption teller; final String country,state,city,street,house,zip; ClientAddResult(String n,String s,String p,String b,String ph,String e,UserOption t,String c1,String c2,String c3,String st,String h,String z){name=n;surname=s;password=p;birth=b;phone=ph;email=e;teller=t;country=c1;state=c2;city=c3;street=st;house=h;zip=z;} }
     private static class TellerAddResult { final String name,surname,password,phone,email; final BranchOption branch; final String country,state,city,street,house,zip; TellerAddResult(String n,String s,String p,String ph,String e,BranchOption b,String c1,String c2,String c3,String st,String h,String z){name=n;surname=s;password=p;phone=ph;email=e;branch=b;country=c1;state=c2;city=c3;street=st;house=h;zip=z;} }

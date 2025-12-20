@@ -104,18 +104,26 @@ CREATE TABLE Branch
 (
     Branch_id   INTEGER  NOT NULL ,
     Branch_name VARCHAR2 (50)  NOT NULL ,
-    Address_id  INTEGER  NOT NULL
+    Address_id  INTEGER  NOT NULL,
+    Parent_branch_id INTEGER
 )
 ;
 
 ALTER TABLE Branch
     ADD CONSTRAINT Branch_PK PRIMARY KEY ( Branch_id ) ;
 
+ALTER TABLE BRANCH
+    ADD CONSTRAINT FK_BRANCH_HIERARCHY
+        FOREIGN KEY (PARENT_BRANCH_ID)
+            REFERENCES BRANCH (BRANCH_ID)
+                ON DELETE SET NULL;
+
+
 CREATE TABLE Client
 (
     User_id       INTEGER  NOT NULL ,
     Birth_number  VARCHAR2 (20)  NOT NULL ,
-    Phone_number  VARCHAR2 (15)  NOT NULL ,
+    Phone_number  VARCHAR2 (20)  NOT NULL ,
     Email_address VARCHAR2 (50)  NOT NULL ,
     Teller_id     INTEGER  NOT NULL
 )
@@ -177,7 +185,7 @@ ALTER TABLE Role
 CREATE TABLE Teller
 (
     User_id            INTEGER  NOT NULL ,
-    Work_phone_number  VARCHAR2 (15)  NOT NULL ,
+    Work_phone_number  VARCHAR2 (20)  NOT NULL ,
     Work_email_address VARCHAR2 (50)  NOT NULL ,
     Branch_id          INTEGER  NOT NULL
 )

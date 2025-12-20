@@ -81,11 +81,16 @@ public class PaymentViewController {
             return;
         }
 
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
+        Connection conn = null;
+        boolean prevAuto = true;
+        try {
+            conn = ConnectionSingleton.getInstance().getConnection();
+            prevAuto = conn.getAutoCommit();
+            conn.setAutoCommit(false);
             Integer toAccountId = null;
 
-            // Resolve destination account ID from number
-            String sqlFindAccount = "SELECT ACCOUNT_ID FROM ACCOUNT WHERE ACCOUNT_NUMBER = ?";
+            // Resolve destination account ID from number (use view)
+            String sqlFindAccount = "SELECT ACCOUNT_ID FROM v_account_list WHERE ACCOUNT_NUMBER = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sqlFindAccount)) {
                 pstmt.setString(1, toAccountNum);
                 try (ResultSet rs = pstmt.executeQuery()) {
@@ -103,7 +108,7 @@ public class PaymentViewController {
                 return;
             }
 
-            // Call the PL/SQL procedure only with values relevant per mode
+            // Call the PL/SQL procedure inside an explicit transaction
             String sqlCall = "{call execute_transfer(?, ?, ?, ?, ?)}";
             try (CallableStatement cstmt = conn.prepareCall(sqlCall)) {
                 // Klient: standardní převod z vybraného účtu na cílový účet
@@ -116,6 +121,8 @@ public class PaymentViewController {
                 cstmt.execute();
             }
 
+            // Commit the transfer
+            conn.commit();
             // Success
             System.out.println("Transaction successful (TRANSFER).");
             
@@ -137,6 +144,14 @@ public class PaymentViewController {
                 showError("Transaction rejected: Negative balance not allowed.");
             } else {
                 showError("Transaction failed: " + msg);
+            }
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ignore) { }
+            }
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(prevAuto); } catch (SQLException ignore) { }
+                try { conn.close(); } catch (SQLException ignore) { }
             }
         }
     }

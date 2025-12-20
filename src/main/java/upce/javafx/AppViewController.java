@@ -78,6 +78,10 @@ public class AppViewController {
         isEmulating = false;
         adminSavedUserId = -1;
 
+        // Ensure stop buttons are hidden for next session
+        if (clientViewController != null) clientViewController.setEmulationMode(false);
+        if (tellerViewController != null) tellerViewController.setEmulationMode(false);
+
         // Return to login screen
         showOnly(loginPane);
     }
@@ -104,7 +108,8 @@ public class AppViewController {
             return;
         }
 
-        String userLoginQuery = "SELECT u.*, r.ROLE_NAME FROM \"User\" u JOIN ROLE r ON u.ROLE_ID = r.ROLE_ID WHERE u.NAME = ? AND u.SURNAME = ? AND u.PASSWORD = ?";
+        // Use view for login: v_user_with_role
+        String userLoginQuery = "SELECT * FROM v_user_with_role WHERE NAME = ? AND SURNAME = ? AND PASSWORD = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(userLoginQuery)) {
             stmt.setString(1, nameField.getText());
@@ -161,8 +166,9 @@ public class AppViewController {
         loginErrorLabel.setVisible(false);
         loginErrorLabel.setManaged(false);
 
-        // Log successful login (Client/Teller)
-        logLogin(HelloApplication.userId);
+        // Ensure emulation mode is off for fresh login
+        if (clientViewController != null) clientViewController.setEmulationMode(false);
+        if (tellerViewController != null) tellerViewController.setEmulationMode(false);
 
         if (isTeller) {
             // Show teller view
@@ -180,12 +186,7 @@ public class AppViewController {
                 return;
             }
 
-            String sql = """
-                    SELECT u.NAME, u.SURNAME, t.WORK_PHONE_NUMBER, t.WORK_EMAIL_ADDRESS, u.USER_ID 
-                    FROM "User" u 
-                    JOIN TELLER t ON u.USER_ID = t.USER_ID 
-                    WHERE u.USER_ID = ?
-                """;
+            String sql = "SELECT NAME, SURNAME, WORK_PHONE_NUMBER, WORK_EMAIL_ADDRESS, USER_ID FROM v_teller_overview WHERE USER_ID = ?";
 
             try(PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setInt(1, HelloApplication.userId);
@@ -216,7 +217,7 @@ public class AppViewController {
                 System.out.println("Connection error");
                 return;
             }
-            String sql = "SELECT * FROM \"User\" JOIN CLIENT ON \"User\".USER_ID = CLIENT.USER_ID WHERE CLIENT.USER_ID = ?";
+            String sql = "SELECT NAME, SURNAME, BIRTH_NUMBER, PHONE_NUMBER, EMAIL_ADDRESS FROM v_client_overview WHERE USER_ID = ?";
             try(PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setInt(1, HelloApplication.userId);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -231,7 +232,7 @@ public class AppViewController {
                 return;
             }
 
-            sql = "SELECT * FROM CLIENT JOIN TELLER ON CLIENT.TELLER_ID = TELLER.USER_ID JOIN \"User\" u ON TELLER_ID = u.USER_ID JOIN BRANCH ON BRANCH.BRANCH_ID = TELLER.BRANCH_ID WHERE CLIENT.USER_ID = ?";
+            sql = "SELECT TELLER_NAME AS NAME, TELLER_SURNAME AS SURNAME, TELLER_WORK_PHONE AS WORK_PHONE_NUMBER, TELLER_WORK_EMAIL AS WORK_EMAIL_ADDRESS, TELLER_BRANCH_NAME AS BRANCH_NAME FROM v_client_overview WHERE USER_ID = ?";
             try(PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setInt(1, HelloApplication.userId);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -246,7 +247,7 @@ public class AppViewController {
                 return;
             }
 
-            sql = "SELECT ACCOUNT_ID, ACCOUNT_NUMBER FROM ACCOUNT WHERE CLIENT_ID = ?";
+            sql = "SELECT ACCOUNT_ID, ACCOUNT_NUMBER FROM v_account_list WHERE CLIENT_ID = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setInt(1, HelloApplication.userId);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -323,7 +324,11 @@ public class AppViewController {
         }
 
         // Insert pending user
-        try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
+        Connection conn = null;
+        boolean prevAuto = true;
+        try {
+            conn = ConnectionSingleton.getInstance().getConnection();
+            prevAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
 
             // find client role id
@@ -386,7 +391,15 @@ public class AppViewController {
             conn.commit();
             showInfo("Request submitted", "Your request was submitted. A teller will review and approve your account.");
         } catch (SQLException e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ignore) {}
+            }
             showInfo("Error", "Failed to submit request: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(prevAuto); } catch (SQLException ignore) {}
+                try { conn.close(); } catch (SQLException ignore) {}
+            }
         }
     }
 
@@ -410,6 +423,7 @@ public class AppViewController {
         showOnly(clientView);
         if (clientViewController != null) {
             clientViewController.showSection("profile");
+            clientViewController.clearAccountButtons(); // FIX: Clear previous user's accounts
         }
         Connection conn;
         try {

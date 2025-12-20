@@ -25,24 +25,10 @@
                     style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
 
             <!-- Clients Tab (Expandable) -->
-            <VBox spacing="2">
-                <Button fx:id="clientsButton" text="► Clients" maxWidth="Infinity"
-                        style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
-
-                <!-- Sub-menu that will list all clients assigned to this teller -->
-                <VBox fx:id="clientsSubMenu" spacing="2" style="-fx-padding: 0 0 0 15;" visible="false" managed="false">
-                    <!-- Example static items (can be replaced/populated dynamically from controller) -->
-                    <Button fx:id="client1Button" text="Client 1" maxWidth="Infinity"
-                            style="-fx-background-color: #5dade2; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 8;"/>
-                    <Button fx:id="client2Button" text="Client 2" maxWidth="Infinity"
-                            style="-fx-background-color: #5dade2; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 8;"/>
-                </VBox>
-            </VBox>
-
-            <!-- Notifications Tab -->
-            <Button fx:id="notificationsButton" text="Notifications" maxWidth="Infinity"
-                    style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
-            </Button>
+            <Button fx:id="clientsButton" text="► Clients" maxWidth="Infinity" style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <VBox fx:id="clientsSubMenu" visible="false" managed="false" style="-fx-padding: 0 0 0 20;"/>
+            <Button fx:id="clientsOverviewButton" text="My Clients Overview" maxWidth="Infinity" style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
+            <Button fx:id="notificationsButton" text="Notifications" maxWidth="Infinity" style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;"/>
 
             <Button fx:id="registerNewUserButton" text="New client" maxWidth="Infinity"
                     style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;">
@@ -70,10 +56,10 @@
 
     <!-- MAIN CONTENT AREA -->
     <center>
-        <StackPane fx:id="contentArea" style="-fx-background-color: #ecf0f1;">
+        <VBox fx:id="contentArea" HBox.hgrow="ALWAYS" style="-fx-background-color: #ecf0f1; -fx-padding: 20;">
 
             <!-- PROFILE SECTION -->
-            <VBox fx:id="profileSection" spacing="20" style="-fx-padding: 30;">
+            <VBox fx:id="profileSection" spacing="20">
                 <Label text="Teller Profile" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
 
                 <GridPane hgap="20" vgap="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;">
@@ -105,7 +91,7 @@
             </VBox>
 
             <!-- CLIENTS SECTION: list of clients on the left is in the sidebar; selecting one shows details here -->
-            <VBox fx:id="clientDetailSection" spacing="20" style="-fx-padding: 30;" visible="false">
+            <VBox fx:id="clientDetailSection" spacing="20" visible="false">
                 <Label fx:id="clientHeader" text="Client Details" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
 
                 <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;">
@@ -155,7 +141,7 @@
             </VBox>
 
             <!-- ACCOUNT DETAIL SECTION: shows selected account info and last 5 transactions -->
-            <VBox fx:id="accountDetailSection" spacing="20" style="-fx-padding: 30;" visible="false">
+            <VBox fx:id="accountDetailSection" spacing="20" visible="false">
                 <Label fx:id="accountHeader" text="Account Details" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
 
                 <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;">
@@ -196,7 +182,7 @@
             </VBox>
 
             <!-- CLIENT DOCUMENTS SECTION (New) -->
-            <VBox fx:id="clientDocumentsSection" spacing="20" style="-fx-padding: 30;" visible="false" managed="false">
+            <VBox fx:id="clientDocumentsSection" spacing="20" visible="false" managed="false">
                 <Label fx:id="clientDocsHeader" text="Client Documents" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
 
                 <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 5;" VBox.vgrow="ALWAYS">
@@ -217,7 +203,7 @@
             </VBox>
 
             <!-- CLIENT CHAT SECTION: chat with the selected client (with input) -->
-            <VBox fx:id="clientChatSection" spacing="20" style="-fx-padding: 30;" visible="false">
+            <VBox fx:id="clientChatSection" spacing="20" visible="false">
                 <Label fx:id="clientChatHeader" text="Chat with Client" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
 
                 <VBox spacing="10" VBox.vgrow="ALWAYS"
@@ -246,7 +232,7 @@
             </VBox>
 
             <!-- NOTIFICATIONS SECTION: chat-like feed without the option to write messages -->
-            <VBox fx:id="notificationsSection" spacing="20" style="-fx-padding: 30;" visible="false">
+            <VBox fx:id="notificationsSection" spacing="20" visible="false">
                 <Label text="Notifications" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
 
                 <VBox spacing="10" VBox.vgrow="ALWAYS"
@@ -277,7 +263,7 @@
             </VBox>
 
             <!-- REGISTER NEW CLIENT SECTION -->
-            <VBox fx:id="registerClientSection" spacing="20" style="-fx-padding: 30;" visible="false" managed="false">
+            <VBox fx:id="registerClientSection" spacing="20" visible="false" managed="false">
                 <Label text="Register New Client" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
 
                 <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
@@ -343,12 +329,22 @@
             </VBox>
 
             <!-- PENDING REQUESTS SECTION -->
-            <VBox fx:id="pendingRequestsSection" spacing="20" style="-fx-padding: 30;" visible="false" managed="false">
+            <VBox fx:id="pendingRequestsSection" spacing="20" visible="false" managed="false">
                 <Label text="Pending Registrations" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
                 <TableView fx:id="pendingTable" VBox.vgrow="ALWAYS"/>
             </VBox>
+            <VBox fx:id="clientsOverviewSection" visible="false" managed="false" spacing="15">
+                <Label text="My Clients Financial Overview" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                <TableView fx:id="clientsOverviewTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="overviewNameCol" text="Client Name" prefWidth="200"/>
+                        <TableColumn fx:id="overviewAccountCol" text="Account Number" prefWidth="200"/>
+                        <TableColumn fx:id="overviewTotalCol" text="Total Received" prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </VBox>
 
-        </StackPane>
+        </VBox>
     </center>
 
 </BorderPane>
