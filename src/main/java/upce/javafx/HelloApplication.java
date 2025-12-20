@@ -11,6 +11,11 @@ import java.io.IOException;
 public class HelloApplication extends Application {
     public static int userId = -1;
     private MonthlyInterestScheduler interestScheduler;
+    /**
+     * Starts the JavaFX application by loading the main FXML view and initializing the scheduler.
+     * @param stage The primary stage for this application.
+     * @throws IOException If the FXML file cannot be loaded.
+     */
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("app-view.fxml"));
@@ -24,6 +29,9 @@ public class HelloApplication extends Application {
         interestScheduler.start();
     }
 
+    /**
+     * Stops the application and shuts down the interest scheduler.
+     */
     @Override
     public void stop() {
         if (interestScheduler != null) {

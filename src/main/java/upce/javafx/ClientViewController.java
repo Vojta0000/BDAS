@@ -52,10 +52,18 @@ public class ClientViewController {
     // Reference to the main controller to trigger screen switching
     private AppViewController appViewController;
 
+    /**
+     * Sets the application view controller reference.
+     * @param appViewController The parent application view controller.
+     */
     public void setAppViewController(AppViewController appViewController) {
         this.appViewController = appViewController;
     }
 
+    /**
+     * Sets whether the controller is in emulation mode.
+     * @param emulating True if in emulation mode.
+     */
     public void setEmulationMode(boolean emulating) {
         if (stopEmulateButton != null) {
             stopEmulateButton.setVisible(emulating);
@@ -63,6 +71,9 @@ public class ClientViewController {
         }
     }
 
+    /**
+     * Handles the stop emulation action.
+     */
     @FXML
     private void onStopEmulate() {
         if (appViewController != null) {
@@ -108,6 +119,9 @@ public class ClientViewController {
     @FXML private TextField messageInput;
     @FXML private Button sendMessageButton;
 
+    /**
+     * Initializes the controller, sets up UI components and event handlers.
+     */
     @FXML
     public void initialize() {
         // Initialize dynamic history button
@@ -174,6 +188,9 @@ public class ClientViewController {
         }
     }
 
+    /**
+     * Sets up drag and drop functionality for document uploads.
+     */
     private void setupFileDragAndDrop() {
         fileDropArea.setOnDragOver(event -> {
             if (event.getGestureSource() != fileDropArea && event.getDragboard().hasFiles()) {
@@ -196,6 +213,10 @@ public class ClientViewController {
         });
     }
 
+    /**
+     * Saves a file to the database.
+     * @param file The file to save.
+     */
     private void saveFileToDatabase(File file) {
         int userId = HelloApplication.userId;
         String name = file.getName();
@@ -225,6 +246,9 @@ public class ClientViewController {
         }
     }
 
+    /**
+     * Loads documents for the current user from the database.
+     */
     private void loadDocuments() {
         if (documentsListView == null) return;
         documentsListView.getItems().clear();
@@ -261,6 +285,11 @@ public class ClientViewController {
         }
     }
 
+    /**
+     * Opens a document from the database and allows the user to save it locally.
+     * @param docId The ID of the document.
+     * @param fileName The name of the file.
+     */
     private void openDocument(int docId, String fileName) {
         try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
             String sql = "SELECT File_data FROM Document WHERE Document_id = ?";
@@ -306,14 +335,16 @@ public class ClientViewController {
     }
 
     /**
-     * Clears existing account buttons
+     * Clears all account buttons from the side menu.
      */
     public void clearAccountButtons() {
         accountsSubMenu.getChildren().clear();
     }
 
     /**
-     * Adds a dynamic account button
+     * Adds a dynamic account button to the side menu.
+     * @param accountName The name (number) of the account.
+     * @param accountId The ID of the account.
      */
     public void addAccountButton(String accountName, int accountId) {
         Button btn = new Button(accountName);
@@ -336,6 +367,10 @@ public class ClientViewController {
         accountsSubMenu.getChildren().add(btn);
     }
 
+    /**
+     * Loads details for a specific account from the database.
+     * @param accountId The ID of the account.
+     */
     private void loadAccountData(int accountId) {
         String sql = "SELECT * FROM ACCOUNT WHERE ACCOUNT_ID = ?";
         try(Connection conn = ConnectionSingleton.getInstance().getConnection();
@@ -354,7 +389,7 @@ public class ClientViewController {
     }
 
     /**
-     * Toggles the visibility of the accounts submenu
+     * Toggles the visibility of the accounts sub-menu.
      */
     private void toggleAccountsMenu() {
         boolean isVisible = accountsSubMenu.isVisible();
@@ -372,8 +407,8 @@ public class ClientViewController {
     }
 
     /**
-     * Shows the specified section and hides all others
-     * @param section The section to show: "profile", "account1", "account2", "teller", or "support"
+     * Shows the specified section and hides all others.
+     * @param section The section to show: "profile", "account_generic", "teller", "support", or "documents".
      */
     public void showSection(String section) {
         // Hide all sections
@@ -416,7 +451,8 @@ public class ClientViewController {
     }
 
     /**
-     * Opens the history window
+     * Opens a new window displaying the transaction history for a specific account.
+     * @param accountId The ID of the account.
      */
     private void openAccountHistoryWindow(int accountId) {
         Stage stage = new Stage();
@@ -532,12 +568,22 @@ public class ClientViewController {
     }
 
     // Simple inner class for the history table
+    /**
+     * Inner class representing a row in the transaction history table.
+     */
     public static class TransactionHistoryRow {
         private final SimpleStringProperty date;
         private final SimpleStringProperty type;
         private final SimpleStringProperty description;
         private final SimpleStringProperty amount;
 
+        /**
+         * Constructor for TransactionHistoryRow.
+         * @param date Date of the transaction.
+         * @param type Type of the transaction.
+         * @param description Description or counterparty account.
+         * @param amount Amount of the transaction.
+         */
         public TransactionHistoryRow(String date, String type, String description, String amount) {
             this.date = new SimpleStringProperty(date);
             this.type = new SimpleStringProperty(type);
@@ -545,14 +591,26 @@ public class ClientViewController {
             this.amount = new SimpleStringProperty(amount);
         }
 
+        /**
+         * @return Date property.
+         */
         public SimpleStringProperty dateProperty() { return date; }
+        /**
+         * @return Type property.
+         */
         public SimpleStringProperty typeProperty() { return type; }
+        /**
+         * @return Description property.
+         */
         public SimpleStringProperty descriptionProperty() { return description; }
+        /**
+         * @return Amount property.
+         */
         public SimpleStringProperty amountProperty() { return amount; }
     }
 
     /**
-     * Sends a message in the support chat
+     * Sends a message in the support chat and saves it to the database.
      */
     private void sendMessage() {
         String message = messageInput.getText().trim();
@@ -684,7 +742,7 @@ public class ClientViewController {
     }
 
     /**
-     * Resets all navigation button styles to default
+     * Resets the styles of all navigation buttons to their default state.
      */
     private void resetButtonStyles() {
         String defaultStyle = "-fx-background-color: #34495e; -fx-text-fill: white; -fx-alignment: center-left; -fx-padding: 10;";
@@ -705,9 +763,9 @@ public class ClientViewController {
     }
 
     /**
-     * Updates the style of a button to highlight or unhighlight it
-     * @param button The button to update
-     * @param active Whether the button should be highlighted
+     * Updates the style of a specific button based on whether it's active.
+     * @param button The button to update.
+     * @param active True if the button should be styled as active.
      */
     private void updateButtonStyle(Button button, boolean active) {
         if (active) {
@@ -720,9 +778,9 @@ public class ClientViewController {
     }
 
     /**
-     * Opens the payment window
-     * @param accountId The ID of the account
-     * @param accountNumber The number of the account
+     * Opens the payment window for a specific account.
+     * @param accountId The ID of the source account.
+     * @param accountNumber The number of the source account.
      */
     private void openPaymentWindow(int accountId, String accountNumber) {
         try {
@@ -753,6 +811,9 @@ public class ClientViewController {
         }
     }
 
+    /**
+     * Handles the logout process.
+     */
     private void onLogout() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Logout");
@@ -770,10 +831,10 @@ public class ClientViewController {
     }
 
     /**
-     * Shows an alert dialog
-     * @param title The title of the alert
-     * @param content The content text
-     * @param type The type of alert
+     * Shows an alert dialog to the user.
+     * @param title The title of the alert.
+     * @param content The content text of the alert.
+     * @param type The type of the alert.
      */
     private void showAlert(String title, String content, Alert.AlertType type) {
         Alert alert = new Alert(type);
@@ -786,7 +847,12 @@ public class ClientViewController {
     // Public methods for updating data from database
 
     /**
-     * Updates the profile information
+     * Updates the profile information in the UI.
+     * @param name Name of the client.
+     * @param surname Surname of the client.
+     * @param birthNumber Birth number of the client.
+     * @param phone Phone number of the client.
+     * @param email Email address of the client.
      */
     public void updateProfileInfo(String name, String surname, String birthNumber, String phone, String email) {
         nameField.setText(name);
@@ -796,6 +862,14 @@ public class ClientViewController {
         emailField.setText(email);
     }
 
+    /**
+     * Updates the teller information section in the UI.
+     * @param name Name of the teller.
+     * @param surname Surname of the teller.
+     * @param phone Phone number of the teller.
+     * @param email Email address of the teller.
+     * @param branch Branch where the teller is located.
+     */
     public void updateTellerSection(String name, String surname, String phone, String email, String branch) {
         ((Label) tellerSection.getChildren().get(1)).setText(name + " " + surname);
         ((Label) tellerSection.getChildren().get(3)).setText(phone);

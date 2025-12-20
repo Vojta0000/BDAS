@@ -3,14 +3,18 @@ package upce.javafx;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 
+/**
+ * Manages Oracle database connections using a Singleton pattern.
+ */
 public class ConnectionSingleton {
     // Thread-safe lazy singleton for configuration only
     private static volatile ConnectionSingleton instance = null;
 
+    /**
+     * Returns the singleton instance of ConnectionSingleton.
+     * @return The singleton instance.
+     */
     public static ConnectionSingleton getInstance() {
         if (instance == null) {
             synchronized (ConnectionSingleton.class) {

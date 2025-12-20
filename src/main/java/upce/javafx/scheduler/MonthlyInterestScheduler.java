@@ -31,21 +31,35 @@ public class MonthlyInterestScheduler {
     private final LocalTime runAtTime;
     private ScheduledFuture<?> current;
 
+    /**
+     * Default constructor using system default timezone and 00:15 as run time.
+     */
     public MonthlyInterestScheduler() {
         this(ZoneId.systemDefault(), LocalTime.of(0, 15));
     }
 
+    /**
+     * Constructor allowing custom timezone and run time.
+     * @param zoneId Timezone to use.
+     * @param runAtTime Time of day to run the scheduler.
+     */
     public MonthlyInterestScheduler(ZoneId zoneId, LocalTime runAtTime) {
         this.zoneId = Objects.requireNonNull(zoneId);
         this.runAtTime = Objects.requireNonNull(runAtTime);
     }
 
+    /**
+     * Starts the scheduler.
+     */
     public synchronized void start() {
         if (current != null && !current.isCancelled()) return;
         scheduleNext();
         System.out.println("[MonthlyInterestScheduler] Started. Next run in " + millisToNextRun()/1000 + " seconds.");
     }
 
+    /**
+     * Shuts down the scheduler.
+     */
     public synchronized void shutdown() {
         if (current != null) current.cancel(false);
         executor.shutdownNow();
@@ -55,6 +69,9 @@ public class MonthlyInterestScheduler {
     /** Execute the PL/SQL procedure immediately (manual trigger). */
     public void runOnceNow() { executor.submit(this::executeProcedureSafely); }
 
+    /**
+     * Schedules the next run of the procedure.
+     */
     private void scheduleNext() {
         long delayMs = millisToNextRun();
         current = executor.schedule(() -> {
@@ -64,6 +81,10 @@ public class MonthlyInterestScheduler {
         }, Math.max(0, delayMs), TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Calculates the milliseconds until the next scheduled run.
+     * @return Milliseconds until next run.
+     */
     private long millisToNextRun() {
         LocalDateTime now = LocalDateTime.now(zoneId);
         LocalDate today = now.toLocalDate();
@@ -80,6 +101,9 @@ public class MonthlyInterestScheduler {
         return Duration.between(now, nextRun).toMillis();
     }
 
+    /**
+     * Safely executes the interest calculation procedure, including retries on failure.
+     */
     private void executeProcedureSafely() {
         System.out.println("[MonthlyInterestScheduler] Executing apply_monthly_interest at " + LocalDateTime.now(zoneId));
         try {
@@ -100,6 +124,10 @@ public class MonthlyInterestScheduler {
         }
     }
 
+    /**
+     * Executes the Oracle stored procedure to apply monthly interest.
+     * @throws SQLException If a database error occurs.
+     */
     private void executeProcedure() throws SQLException {
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              CallableStatement cs = conn.prepareCall("{ call apply_monthly_interest }")) {

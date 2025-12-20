@@ -48,6 +48,9 @@ public class AppViewController {
     private boolean isEmulating = false;
     private int adminSavedUserId = -1;
 
+    /**
+     * Initializes the controller, sets up initial visibility of UI components.
+     */
     @FXML
     private void initialize() {
         // Start with only login visible; includes are hidden in FXML via visible/managed flags.
@@ -65,6 +68,9 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Logs out the current user and returns to the login screen.
+     */
     public void logout() {
         // Clear login fields for security
         nameField.clear();
@@ -86,6 +92,9 @@ public class AppViewController {
         showOnly(loginPane);
     }
 
+    /**
+     * Handles the login logic, verifies credentials, and switches to the appropriate view based on user role.
+     */
     @FXML
     private void onLogin() {
         // In real app you would authenticate here.
@@ -267,6 +276,9 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Handles the request for a new account from the login screen.
+     */
     @FXML
     private void onRequestAccount() {
         // Build a simple registration dialog mirroring teller registration fields
@@ -403,6 +415,11 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Displays an information alert to the user.
+     * @param title Title of the alert.
+     * @param msg Message content of the alert.
+     */
     private void showInfo(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
         a.setHeaderText(title);
@@ -411,6 +428,10 @@ public class AppViewController {
     }
 
     // ===== Emulation API for Admin =====
+    /**
+     * Starts emulation mode as a client.
+     * @param clientUserId The user ID of the client to emulate.
+     */
     public void startEmulateClient(int clientUserId) {
         // Save admin context
         if (!isEmulating) {
@@ -476,6 +497,10 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Starts emulation mode as a teller.
+     * @param tellerUserId The user ID of the teller to emulate.
+     */
     public void startEmulateTeller(int tellerUserId) {
         if (!isEmulating) {
             adminSavedUserId = HelloApplication.userId;
@@ -523,6 +548,9 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Stops emulation mode and returns to the admin view.
+     */
     public void stopEmulation() {
         if (!isEmulating) return;
         // restore admin
@@ -539,6 +567,10 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Shows only the specified node and hides all others in the main stack.
+     * @param toShow The node to display.
+     */
     private void showOnly(Node toShow) {
         // login
         setVisibleManaged(loginPane, toShow == loginPane);
@@ -551,6 +583,10 @@ public class AppViewController {
     }
 
     // --- Login logging helpers ---
+    /**
+     * Logs the login event into the database.
+     * @param userId The ID of the user logging in.
+     */
     private void logLogin(int userId) {
         if (userId <= 0) return;
         String ip = getLocalIpAddress();
@@ -567,6 +603,10 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Gets the local IP address of the machine.
+     * @return The IP address as a string.
+     */
     private String getLocalIpAddress() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
@@ -575,24 +615,50 @@ public class AppViewController {
         }
     }
 
+    /**
+     * Sets both visibility and managed state of a node.
+     * @param node The node to modify.
+     * @param value The value to set for visible and managed properties.
+     */
     private void setVisibleManaged(Node node, boolean value) {
         if (node == null) return;
         node.setVisible(value);
         node.setManaged(value);
     }
 
+    /**
+     * Checks if a string is null or empty.
+     * @param s The string to check.
+     * @return True if null or empty, false otherwise.
+     */
     private boolean isEmpty(String s) { return s == null || s.trim().isEmpty(); }
 
     // Delegation area — expose key functionality from sub-controllers so
     // the app can interact with client/teller features through this root controller.
 
     // --- Client view helpers ---
+    /**
+     * Updates the client profile information.
+     * @param name Name of the client.
+     * @param surname Surname of the client.
+     * @param birthNumber Birth number of the client.
+     * @param phone Phone number of the client.
+     * @param email Email address of the client.
+     */
     public void updateClientProfile(String name, String surname, String birthNumber, String phone, String email) {
         if (clientViewController != null) {
             clientViewController.updateProfileInfo(name, surname, birthNumber, phone, email);
         }
     }
 
+    /**
+     * Updates the client profile information in the teller section.
+     * @param name Name of the client.
+     * @param surname Surname of the client.
+     * @param phone Phone number of the client.
+     * @param email Email address of the client.
+     * @param branch Branch name.
+     */
     public void updateClientTellerSection(String name, String surname, String phone, String email, String branch) {
         if (clientViewController != null) {
             clientViewController.updateTellerSection(name, surname, phone, email, branch);
@@ -600,6 +666,11 @@ public class AppViewController {
     }
 
     // --- Teller view helpers --- (demonstrative)
+    /**
+     * Opens the client demo view for a teller.
+     * @param name Name of the client.
+     * @param id ID of the client.
+     */
     public void tellerOpenDemoClient(String name, String id) {
         // Expose a simple way to open a client in teller view
         if (tellerViewController != null) {

@@ -27,6 +27,9 @@ public class PaymentViewController {
     private int fromAccountId;
     private Runnable onPaymentSuccess; // Callback for success
 
+    /**
+     * Initializes the controller, setting up button actions and initial UI state.
+     */
     @FXML
     public void initialize() {
         cancelButton.setOnAction(e -> closeWindow());
@@ -38,15 +41,27 @@ public class PaymentViewController {
         errorLabel.setManaged(false);
     }
 
+    /**
+     * Sets the source account for the payment.
+     * @param accountId Internal ID of the account.
+     * @param accountNumber Displayable account number.
+     */
     public void setFromAccount(int accountId, String accountNumber) {
         this.fromAccountId = accountId;
         this.fromAccountField.setText(accountNumber);
     }
 
+    /**
+     * Sets a callback to be executed upon a successful payment.
+     * @param onPaymentSuccess Runnable callback.
+     */
     public void setOnPaymentSuccess(Runnable onPaymentSuccess) {
         this.onPaymentSuccess = onPaymentSuccess;
     }
 
+    /**
+     * Processes the payment by validating input and calling the PL/SQL stored procedure.
+     */
     private void processPayment() {
         String toAccountNum = toAccountField.getText();
         String amountStr = amountField.getText();
@@ -156,12 +171,19 @@ public class PaymentViewController {
         }
     }
 
+    /**
+     * Displays an error message to the user.
+     * @param message The error message to display.
+     */
     private void showError(String message) {
         errorLabel.setText(message);
         errorLabel.setVisible(true);
         errorLabel.setManaged(true);
     }
 
+    /**
+     * Closes the current payment window.
+     */
     private void closeWindow() {
         Stage stage = (Stage) cancelButton.getScene().getWindow();
         stage.close();

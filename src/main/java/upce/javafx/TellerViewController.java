@@ -54,10 +54,18 @@ public class TellerViewController {
     // Reference to the main controller to trigger screen switching
     private AppViewController appViewController;
 
+    /**
+     * Sets the application view controller reference.
+     * @param appViewController The parent application view controller.
+     */
     public void setAppViewController(AppViewController appViewController) {
         this.appViewController = appViewController;
     }
 
+    /**
+     * Sets whether the controller is in emulation mode.
+     * @param emulating True if in emulation mode.
+     */
     public void setEmulationMode(boolean emulating) {
         if (stopEmulateButton != null) {
             stopEmulateButton.setVisible(emulating);
@@ -65,6 +73,9 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Handles the stop emulation action.
+     */
     @FXML
     private void onStopEmulate() {
         if (appViewController != null) {
@@ -213,6 +224,9 @@ public class TellerViewController {
 
     private boolean showSent = false;
 
+    /**
+     * Initializes the controller, sets up UI components and event handlers.
+     */
     @FXML
     public void initialize() {
         // Sidebar navigation
@@ -317,6 +331,9 @@ public class TellerViewController {
 //        setProfileDemoData();
     }
 
+    /**
+     * Sets up the clients overview table columns.
+     */
     private void setupOverviewTable() {
         overviewNameCol.setCellValueFactory(d -> d.getValue().name);
         overviewAccountCol.setCellValueFactory(d -> d.getValue().accountNumber);
@@ -337,6 +354,9 @@ public class TellerViewController {
         });
     }
 
+    /**
+     * Loads the clients overview data from the database.
+     */
     private void loadClientsOverview() {
         clientsOverviewTable.getItems().clear();
         int tellerId = HelloApplication.userId;
@@ -377,6 +397,9 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Inner class representing a row in the client overview table.
+     */
     public static class ClientOverviewRow {
         public final javafx.beans.property.SimpleStringProperty name;
         public final javafx.beans.property.SimpleStringProperty accountNumber;
@@ -389,6 +412,9 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Opens the client chat section.
+     */
     private void openClientChat() {
         clientChatHeader.setText("Chat with " + (currentClientName != null ? currentClientName : "Client"));
         showSection("chat");
@@ -399,6 +425,10 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Loads the chat history for a specific client.
+     * @param clientId The ID of the client.
+     */
     private void loadClientChatHistory(int clientId) {
         clientChatMessagesContainer.getChildren().clear();
         int myId = HelloApplication.userId;
@@ -439,6 +469,9 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Sends a message to the currently selected client.
+     */
     private void sendClientMessage() {
         String msg = clientMessageInput.getText();
         if (msg == null || msg.trim().isEmpty()) {
@@ -472,6 +505,9 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Loads the list of clients assigned to the teller.
+     */
     public void loadMyClients() {
         clientsSubMenu.getChildren().clear();
         int tellerId = HelloApplication.userId;
@@ -507,6 +543,11 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Opens the detailed view for a specific client.
+     * @param name The name of the client.
+     * @param id The ID of the client.
+     */
     private void openClient(String name, String id) {
         currentClientName = name;
         currentClientId = id;
@@ -522,6 +563,10 @@ public class TellerViewController {
 
 // --- Account History Logic ---
 
+    /**
+     * Populates the account information for a specific client.
+     * @param clientId The ID of the client.
+     */
     private void populateClientAccounts(int clientId) {
         clientAccountsContainer.getChildren().clear();
 
@@ -561,6 +606,10 @@ public class TellerViewController {
         // ... Add Account Button ...
     }
 
+    /**
+     * Opens a new window displaying the transaction history for a specific account.
+     * @param accountId The ID of the account.
+     */
     private void openAccountHistoryWindow(int accountId) {
         Stage stage = new Stage();
         stage.setTitle("Transaction History");
@@ -646,6 +695,10 @@ public class TellerViewController {
         new Thread(task).start();
     }
 
+    /**
+     * Adds a new account for a specific client.
+     * @param clientId The ID of the client.
+     */
     private void addNewAccountForClient(int clientId) {
         try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
             createInitialAccount(conn, clientId);
@@ -658,17 +711,28 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Toggles the visibility of the clients menu.
+     */
     private void toggleClientsMenu() {
         boolean visible = clientsSubMenu.isVisible();
         setClientsMenuVisible(!visible);
     }
 
+    /**
+     * Sets the visibility and managed state of the clients menu.
+     * @param visible True to make it visible.
+     */
     private void setClientsMenuVisible(boolean visible) {
         clientsSubMenu.setVisible(visible);
         clientsSubMenu.setManaged(visible);
         clientsButton.setText((visible ? "▼" : "►") + " Clients");
     }
 
+    /**
+     * Shows the specified section and hides all others.
+     * @param section The name of the section to show.
+     */
     public void showSection(String section) {
         // Hide all
         profileSection.setVisible(false);
@@ -761,11 +825,17 @@ public class TellerViewController {
     @FXML
     private TableView<PendingRow> pendingTable;
 
+    /**
+     * Initializes the pending requests section.
+     */
     @FXML
     public void initializePending() { /* kept for potential FXML hooks; logic moved into initialize() */ }
 
     private boolean pendingColumnsInitialized = false;
 
+    /**
+     * Sets up the columns for the pending requests table.
+     */
     private void setupPendingTable() {
         if (pendingTable == null || pendingColumnsInitialized) return;
         TableColumn<PendingRow, String> nameCol = new TableColumn<>("Name");
@@ -818,6 +888,9 @@ public class TellerViewController {
         pendingColumnsInitialized = true;
     }
 
+    /**
+     * Loads the pending client requests assigned to the teller.
+     */
     private void loadPendingRequests() {
         setupPendingTable();
         if (pendingTable == null) return;
@@ -856,6 +929,16 @@ public class TellerViewController {
         pendingTable.setItems(rows);
     }
 
+    /**
+     * Formats the address components into a single string.
+     * @param country Country name.
+     * @param state State/Region name.
+     * @param city City name.
+     * @param street Street name.
+     * @param house House number.
+     * @param zip ZIP code.
+     * @return Formatted address string.
+     */
     private String formatAddress(String country, String state, String city, String street, int house, int zip) {
         java.util.List<String> parts = new java.util.ArrayList<>();
         if (street != null && !street.isEmpty()) parts.add(street + " " + house);
@@ -866,6 +949,10 @@ public class TellerViewController {
         return String.join(", ", parts);
     }
 
+    /**
+     * Approves a pending client request.
+     * @param userId The ID of the user to approve.
+     */
     private void approvePending(int userId) {
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET APPROVED='Y' WHERE USER_ID = ?")) {
@@ -878,6 +965,10 @@ public class TellerViewController {
         loadMyClients();
     }
 
+    /**
+     * Declines a pending client request.
+     * @param userId The ID of the user to decline.
+     */
     private void declinePending(int userId) {
         try (Connection conn = ConnectionSingleton.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement("UPDATE \"User\" SET APPROVED='R' WHERE USER_ID = ?")) {
@@ -889,6 +980,9 @@ public class TellerViewController {
         loadPendingRequests();
     }
 
+    /**
+     * Inner class representing a row in the pending requests table.
+     */
     public static class PendingRow {
         final javafx.beans.property.SimpleIntegerProperty userId = new javafx.beans.property.SimpleIntegerProperty();
         final javafx.beans.property.SimpleStringProperty name = new javafx.beans.property.SimpleStringProperty();
@@ -909,12 +1003,18 @@ public class TellerViewController {
 
 // --- Documents Logic ---
 
+    /**
+     * Opens the client documents section.
+     */
     private void openClientDocs() {
         if (currentClientId == null) return;
         clientDocsHeader.setText("Documents for " + (currentClientName != null ? currentClientName : "Client"));
         showSection("documents");
     }
 
+    /**
+     * Sets up drag and drop functionality for document uploads.
+     */
     private void setupFileDragAndDrop() {
         fileDropArea.setOnDragOver(event -> {
             if (event.getGestureSource() != fileDropArea && event.getDragboard().hasFiles()) {
@@ -937,6 +1037,10 @@ public class TellerViewController {
         });
     }
 
+    /**
+     * Saves a file to the database for the currently selected client.
+     * @param file The file to save.
+     */
     private void saveFileToDatabase(File file) {
         if (currentClientId == null) return;
         int clientId = Integer.parseInt(currentClientId);
@@ -967,6 +1071,9 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Loads the documents for the currently selected client.
+     */
     private void loadClientDocuments() {
         if (documentsListView == null || currentClientId == null) return;
         documentsListView.getItems().clear();
@@ -1003,6 +1110,11 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Opens a document from the database and allows the user to save it locally.
+     * @param docId The ID of the document.
+     * @param fileName The name of the file.
+     */
     private void openDocument(int docId, String fileName) {
         try (Connection conn = ConnectionSingleton.getInstance().getConnection()) {
             String sql = "SELECT File_data FROM Document WHERE Document_id = ?";
@@ -1042,6 +1154,9 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Registers a new client in the system.
+     */
     private void registerClient() {
         if (isEmpty(regNameField) || isEmpty(regSurnameField) || isEmpty(regBirthNumberField) ||
                 isEmpty(regPhoneField) || isEmpty(regEmailField) || isEmpty(regPasswordField) ||
@@ -1110,6 +1225,12 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Creates an initial account for a newly registered client.
+     * @param conn The database connection.
+     * @param clientId The ID of the client.
+     * @throws SQLException If a database error occurs.
+     */
     private void createInitialAccount(Connection conn, int clientId) throws SQLException {
         // Generate random unique account number
         String accNum = "CZ" + (1000000000L + new Random().nextInt(900000000));
@@ -1122,10 +1243,18 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Checks if a text field is empty.
+     * @param field The text field to check.
+     * @return True if empty, false otherwise.
+     */
     private boolean isEmpty(TextField field) {
         return field.getText() == null || field.getText().trim().isEmpty();
     }
 
+    /**
+     * Clears all registration input fields.
+     */
     private void clearRegistrationFields() {
         regNameField.clear();
         regSurnameField.clear();
@@ -1140,6 +1269,11 @@ public class TellerViewController {
         regCountryField.setText("Czechia");
     }
 
+    /**
+     * Shows an alert dialog to the user.
+     * @param title The title of the alert.
+     * @param content The content text of the alert.
+     */
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         if (title.contains("Error")) alert.setAlertType(Alert.AlertType.ERROR);
@@ -1149,6 +1283,9 @@ public class TellerViewController {
         alert.showAndWait();
     }
 
+    /**
+     * Loads notifications for the teller.
+     */
     private void loadNotifications() {
         notificationsMessagesContainer.getChildren().clear();
         int myId = HelloApplication.userId;
@@ -1174,6 +1311,11 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Adds a notification bubble to the UI.
+     * @param message The message content.
+     * @param timeString The time string of the notification.
+     */
     private void addNotificationBubble(String message, String timeString) {
         HBox container = new HBox();
         container.setPadding(new Insets(0, 0, 0, 0));
@@ -1201,6 +1343,12 @@ public class TellerViewController {
     }
 
 
+    /**
+     * Opens the detailed account view.
+     * @param number Account number.
+     * @param balance Account balance.
+     * @param currency Account currency.
+     */
     private void openAccount(String number, String balance, String currency) {
         currentAccountNumber = number;
         accountHeader.setText("Account Details — " + number);
@@ -1211,6 +1359,9 @@ public class TellerViewController {
         showSection("account");
     }
 
+    /**
+     * Sets up the transaction history table.
+     */
     private void setupTransactionTable() {
         if (dateColumn != null) {
             dateColumn.setCellValueFactory(param -> param.getValue().dateProperty());
@@ -1226,6 +1377,13 @@ public class TellerViewController {
     /**
      * Updates the teller profile information from the database
      */
+    /**
+     * Updates the teller profile information.
+     * @param name Name of the teller.
+     * @param surname Surname of the teller.
+     * @param phone Phone number of the teller.
+     * @param email Email address of the teller.
+     */
     public void updateProfileInfo(String name, String surname, String phone, String email) {
         nameField.setText(name);
         surnameField.setText(surname);
@@ -1234,6 +1392,9 @@ public class TellerViewController {
     }
 
 
+    /**
+     * Handles the logout process.
+     */
     private void onLogout() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Logout");
@@ -1249,6 +1410,13 @@ public class TellerViewController {
         }
     }
 
+    /**
+     * Adds a chat bubble to the UI.
+     * @param author The author of the message.
+     * @param message The message content.
+     * @param outgoing True if the message is outgoing.
+     * @param isRead True if the message has been read.
+     */
     private void addChatBubble(String author, String message, boolean outgoing, boolean isRead) {
         HBox container = new HBox();
         container.setPadding(new Insets(0, 0, 0, 0));
@@ -1291,6 +1459,9 @@ public class TellerViewController {
     }
 
     // Helper data structures
+    /**
+     * Inner class representing an account entry.
+     */
     private static class AccountEntry {
         final String number;
         final String balance;
@@ -1304,6 +1475,9 @@ public class TellerViewController {
     }
 
     // Table row model with simple string properties
+    /**
+     * Inner class representing a row in the transaction history table.
+     */
     public static class TransactionRow {
         private final javafx.beans.property.SimpleStringProperty date = new javafx.beans.property.SimpleStringProperty();
         private final javafx.beans.property.SimpleStringProperty description = new javafx.beans.property.SimpleStringProperty();

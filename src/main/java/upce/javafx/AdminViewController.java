@@ -23,6 +23,10 @@ public class AdminViewController {
 
     private AppViewController appViewController;
 
+    /**
+     * Sets the application view controller reference.
+     * @param appViewController The parent application view controller.
+     */
     public void setAppViewController(AppViewController appViewController) {
         this.appViewController = appViewController;
     }
@@ -116,6 +120,9 @@ public class AdminViewController {
     @FXML private TextField documentUserSearchField;
     @FXML private TextField documentExtensionSearchField;
 
+    /**
+     * Initializes the controller, sets up initial visibility of UI components and tables.
+     */
     @FXML
     private void initialize() {
         // Show branches by default when admin view loads
@@ -143,32 +150,81 @@ public class AdminViewController {
         }
     }
 
+    /**
+     * Refreshes the view when the admin login is completed.
+     */
     public void onLoginLoaded() {
         // Called from AppViewController after successful admin login
         reloadBranches();
     }
 
     // Navigation
+    /**
+     * Navigates to the branches section and reloads the data.
+     */
     @FXML private void showBranches() { showOnly(branchesSection); reloadBranches(); }
+    /**
+     * Navigates to the users section and reloads the data.
+     */
     @FXML private void showUsers() { showOnly(usersSection); reloadUsers(); }
+    /**
+     * Navigates to the clients section and reloads the data.
+     */
     @FXML private void showClients() { showOnly(clientsSection); reloadClients(); }
+    /**
+     * Navigates to the tellers section and reloads the data.
+     */
     @FXML private void showTellers() { showOnly(tellersSection); reloadTellers(); }
+    /**
+     * Navigates to the accounts section and reloads the data.
+     */
     @FXML private void showAccounts() { showOnly(accountsSection); reloadAccounts(); }
+    /**
+     * Navigates to the transactions section and reloads the data.
+     */
     @FXML private void showTransactions() { showOnly(transactionsSection); reloadTransactions(); }
+    /**
+     * Navigates to the logins section and reloads the data.
+     */
     @FXML private void showLogins() { showOnly(loginsSection); reloadLogins(); }
+    /**
+     * Navigates to the messages section and reloads the data.
+     */
     @FXML private void showMessages() { showOnly(messagesSection); reloadMessages(); }
+    /**
+     * Navigates to the audits section and reloads the data.
+     */
     @FXML private void showAudits() { showOnly(auditsSection); reloadAudits(); }
+    /**
+     * Navigates to the roles section and reloads the data.
+     */
     @FXML private void showRoles() { showOnly(rolesSection); reloadRoles(); }
+    /**
+     * Navigates to the addresses section and reloads the data.
+     */
     @FXML private void showAddresses() { showOnly(addressesSection); reloadAddresses(); }
+    /**
+     * Navigates to the transaction types section and reloads the data.
+     */
     @FXML private void showTransactionTypes() { showOnly(transactionTypesSection); reloadTransactionTypes(); }
+    /**
+     * Navigates to the documents section and reloads the data.
+     */
     @FXML private void showDocuments() { showOnly(documentsSection); reloadDocuments(); }
 
+    /**
+     * Handles the logout process for the admin.
+     */
     @FXML private void onLogout() {
         if (appViewController != null) {
             appViewController.logout();
         }
     }
 
+    /**
+     * Shows only the specified section node and hides all others.
+     * @param toShow The section node to display.
+     */
     private void showOnly(Node toShow) {
         // Toggle visible/managed for all sections
         setVisibleManaged(branchesSection, toShow == branchesSection);
@@ -186,6 +242,11 @@ public class AdminViewController {
         setVisibleManaged(documentsSection, toShow == documentsSection);
     }
 
+    /**
+     * Sets the visibility and managed state of a node.
+     * @param node The node to modify.
+     * @param value True to make it visible and managed.
+     */
     private void setVisibleManaged(Node node, boolean value) {
         if (node != null) {
             node.setVisible(value);
@@ -195,6 +256,9 @@ public class AdminViewController {
 
     // ----- Roles -----
     private boolean rolesColumnsInitialized = false;
+    /**
+     * Sets up the columns for the roles table.
+     */
     private void setupRolesTable() {
         if (rolesTable == null || rolesColumnsInitialized) return;
         TableColumn<RoleRow, String> nameCol = new TableColumn<>("Role");
@@ -228,6 +292,9 @@ public class AdminViewController {
         rolesColumnsInitialized = true;
     }
 
+    /**
+     * Reloads role data from the database.
+     */
     @FXML private void reloadRoles() {
         setupRolesTable();
         ObservableList<RoleRow> rows = FXCollections.observableArrayList();
@@ -240,6 +307,9 @@ public class AdminViewController {
         rolesTable.setItems(rows);
     }
 
+    /**
+     * Adds a new role to the system.
+     */
     @FXML private void onAddRole(){
         Dialog<RoleEditResult> dlg = new Dialog<>(); dlg.setTitle("Add Role");
         TextField nameF = new TextField(); TextField descF = new TextField();
@@ -257,6 +327,10 @@ public class AdminViewController {
         reloadRoles();
     }
 
+    /**
+     * Edits an existing role.
+     * @param row The role row to edit.
+     */
     private void editRole(RoleRow row){
         Dialog<RoleEditResult> dlg = new Dialog<>(); dlg.setTitle("Edit Role");
         TextField nameF = new TextField(row.name.get()); TextField descF = new TextField(row.description.get());
