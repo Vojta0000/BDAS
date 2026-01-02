@@ -44,3 +44,4 @@ bin/
 
 /src/main/resources/web-change-monitor-extension/
 /LP/
+.aiignore
