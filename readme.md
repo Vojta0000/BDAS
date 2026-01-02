@@ -22,12 +22,19 @@ docker-compose up -d
 Wait for the container to be fully initialized. You can check the logs using `docker logs -f docker-oracle-oracle-1`.
 
 ### 2. Initialize the Database Schema
-Connect to the database (e.g., using Oracle SQL Developer or any other DB client) and run the following scripts in order from the `src/main/SQLScripts/` directory:
+The application includes a built-in "setup mode" that automatically handles the database initialization (creating tables, views, PL/SQL routines, and populating sample data).
 
-1.  **`CreateScript.sql`**: Creates tables, sequences, and constraints.
-2.  **`RealInsertScript.sql`**: Populates the database with realistic sample data.
-3.  **`PlSql.sql`**: Creates PL/SQL functions, procedures, and triggers.
-4.  **`Views.sql`**: Creates database views used by the application for data display.
+To run the setup:
+1.  Open `src/main/java/upce/javafx/Launcher.java`.
+2.  Change the `IS_SETUP_MODE` variable to `true`:
+    ```java
+    public static final boolean IS_SETUP_MODE = true;
+    ```
+3.  Run the application.
+4.  The application will execute all necessary scripts and then exit. Check the console output for "Setup completed successfully."
+5.  **Change the variable back to `false`** to run the application normally.
+
+*Alternative*: You can also run the setup without changing the code by passing the `--setup` flag as a program argument in your Run Configuration.
 
 *Note: Use the connection details from `ConnectionSingleton.java`:*
 - **URL**: `jdbc:oracle:thin:@//localhost:1521/FREEPDB1`
